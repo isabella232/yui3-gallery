@@ -8,7 +8,7 @@ var Lang = A.Lang,
 
 	CSS_FORM = getClassName(NAME),
 	CSS_LABELS = getClassName('field', 'labels'),
-	CSS_LABELS_INLINE = getClassName('field', 'labels', 'inline')
+	CSS_LABELS_INLINE = getClassName('field', 'labels', 'inline'),
 
 	CSS_LABEL_ALIGN = {
 		left: [CSS_LABELS, 'left'].join('-'),
@@ -83,6 +83,20 @@ var Form = A.Component.create(
 
 			labelAlign: {
 				value: ''
+			}
+		},
+
+		HTML_PARSER: {
+			action: function(contentBox) {
+				var instance = this;
+
+				return instance._attributeGetter(null, 'action');
+			},
+
+			method: function(contentBox) {
+				var instance = this;
+
+				return instance._attributeGetter(null, 'method');
 			}
 		},
 
@@ -519,4 +533,4 @@ var Form = A.Component.create(
 A.Form = Form;
 
 
-}, 'gallery-2010.06.02-20-36' ,{requires:['gallery-aui-base','gallery-aui-data-set','gallery-aui-form-field','querystring-parse']});
+}, 'gallery-2010.08.18-17-12' ,{requires:['gallery-aui-base','gallery-aui-data-set','gallery-aui-form-field','querystring-parse']});

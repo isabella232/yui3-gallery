@@ -123,4 +123,4 @@ var Textfield = A.Component.create(
 A.Textfield = Textfield;
 
 
-}, 'gallery-2010.06.02-20-36' ,{requires:['gallery-aui-form-field']});
+}, 'gallery-2010.08.18-17-12' ,{requires:['gallery-aui-form-field']});

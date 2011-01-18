@@ -359,4 +359,4 @@ var OverlayMask = A.Component.create(
 A.OverlayMask = OverlayMask;
 
 
-}, 'gallery-2010.06.02-20-36' ,{skinnable:true, requires:['gallery-aui-base','gallery-aui-overlay-base','event-resize']});
+}, 'gallery-2010.08.18-17-12' ,{skinnable:true, requires:['gallery-aui-base','gallery-aui-overlay-base','event-resize']});

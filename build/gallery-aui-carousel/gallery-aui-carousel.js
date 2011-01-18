@@ -313,4 +313,4 @@ var Carousel = A.Component.create(
 A.Carousel = Carousel;
 
 
-}, 'gallery-2010.06.02-20-36' ,{skinnable:true, requires:['gallery-aui-base','anim']});
+}, 'gallery-2010.08.18-17-12' ,{skinnable:true, requires:['gallery-aui-base','anim']});

@@ -1,1 +1,1 @@
-YUI.add("gallery-aui-image-viewer",function(B){},"gallery-2010.06.02-20-36",{requires:["gallery-aui-image-viewer-base","gallery-aui-image-viewer-gallery"],skinnable:true});
+YUI.add("gallery-aui-image-viewer",function(B){},"gallery-2010.08.18-17-12",{skinnable:true,requires:["gallery-aui-image-viewer-base","gallery-aui-image-viewer-gallery"]});

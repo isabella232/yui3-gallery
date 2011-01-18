@@ -15,19 +15,6 @@ A.mix(A.Array, {
 	}
 });
 
-A.mix(
-	A.Object,
-	{
-		isEmpty: function(o) {
-			for (var name in o) {
-				return false;
-			}
-
-			return true;
-		}
-	}
-);
-
 var Lang = A.Lang;
 var isArray = Lang.isArray;
 var isFunction = Lang.isFunction;
@@ -102,7 +89,7 @@ A.mix(
 );
 ;(function() {
 	/*
-	 * Alloy JavaScript Library vgallery-2010.06.02-20-36
+	 * Alloy JavaScript Library vgallery-2010.08.18-17-12
 	 * http://alloy.liferay.com/
 	 *
 	 * Copyright (c) 2010 Liferay Inc.
@@ -150,9 +137,20 @@ A.mix(
 		instance.use.apply(instance, modules);
 	};
 
-	var ALLOY = YUI(defaults);
+	var ALLOY;
 
-	ALLOY.Env._guidp = ['aui', ALLOY.version, ALLOY.Env._yidx].join('-').replace(/\./g, '-');
+	try {
+		ALLOY = A;
+	}
+	catch (e) {
+		ALLOY = YUI(defaults);
+	}
+
+	var guidExtensions = function(A) {
+		A.Env._guidp = ['aui', A.version, A.Env._yidx].join('-').replace(/\./g, '-');
+	};
+
+	guidExtensions(ALLOY);
 
 	var originalConfig = ALLOY.config;
 
@@ -162,7 +160,16 @@ A.mix(
 		var instance = this;
 
 		if (o || instance instanceof AUI) {
-			return YUI(ALLOY.merge(ALLOY.config, o));
+			var args = ALLOY.Array(arguments);
+
+			args.unshift(ALLOY.config);
+
+			var newInstance = YUI.apply(ALLOY.config.win, args);
+
+			AUI._uaExtensions(newInstance);
+			AUI._guidExtensions(newInstance);
+
+			return newInstance;
 		}
 
 		return ALLOY;
@@ -170,7 +177,9 @@ A.mix(
 
 	var AUI = YUI.AUI;
 
-	window.AUI = AUI;
+	AUI._guidExtensions = guidExtensions;
+
+	
 
 	var UA = ALLOY.UA;
 
@@ -220,118 +229,143 @@ A.mix(
 		UA extensions
 	*/
 
-	var p = navigator.platform;
-	var u = navigator.userAgent;
-	var b = /(Firefox|Opera|Chrome|Safari|KDE|iCab|Flock|IE)/.exec(u);
-	var os = /(Win|Mac|Linux|iPhone|iPad|Sun|Solaris)/.exec(p);
-	var versionDefaults = [0,0];
+	AUI._uaExtensions = function(A) {
+		var p = navigator.platform;
+		var u = navigator.userAgent;
+		var b = /(Firefox|Opera|Chrome|Safari|KDE|iCab|Flock|IE)/.exec(u);
+		var os = /(Win|Mac|Linux|iPhone|iPad|Sun|Solaris)/.exec(p);
+		var versionDefaults = [0,0];
 
-	b = (!b || !b.length) ? (/(Mozilla)/.exec(u) || ['']) : b;
-	os = (!os || !os.length) ? [''] : os;
+		b = (!b || !b.length) ? (/(Mozilla)/.exec(u) || ['']) : b;
+		os = (!os || !os.length) ? [''] : os;
 
-	UA = ALLOY.merge(
-		UA,
-		{
-			gecko: /Gecko/.test(u) && !/like Gecko/.test(u),
-			webkit: /WebKit/.test(u),
+		UA = A.merge(
+			UA,
+			{
+				gecko: /Gecko/.test(u) && !/like Gecko/.test(u),
+				webkit: /WebKit/.test(u),
 
-			aol: /America Online Browser/.test(u),
-			camino: /Camino/.test(u),
-			firefox: /Firefox/.test(u),
-			flock: /Flock/.test(u),
-			icab: /iCab/.test(u),
-			konqueror: /KDE/.test(u),
-			mozilla: /mozilla/.test(u),
-			ie: /MSIE/.test(u),
-			netscape: /Netscape/.test(u),
-			opera: /Opera/.test(u),
-			chrome: /Chrome/.test(u),
-			safari: /Safari/.test(u) && !(/Chrome/.test(u)),
-			browser: b[0].toLowerCase(),
+				aol: /America Online Browser/.test(u),
+				camino: /Camino/.test(u),
+				firefox: /Firefox/.test(u),
+				flock: /Flock/.test(u),
+				icab: /iCab/.test(u),
+				konqueror: /KDE/.test(u),
+				mozilla: /mozilla/.test(u),
+				ie: /MSIE/.test(u),
+				netscape: /Netscape/.test(u),
+				opera: /Opera/.test(u),
+				chrome: /Chrome/.test(u),
+				safari: /Safari/.test(u) && !(/Chrome/.test(u)),
+				browser: b[0].toLowerCase(),
 
-			win: /Win/.test(p),
-			mac: /Mac/.test(p),
-			linux: /Linux/.test(p),
-			iphone: (p == 'iPhone'),
-			ipad: (p == 'iPad'),
-			sun: /Solaris|SunOS/.test(p),
-			os: os[0].toLowerCase(),
+				win: /Win/.test(p),
+				mac: /Mac/.test(p),
+				linux: /Linux/.test(p),
+				iphone: (p == 'iPhone'),
+				ipad: (p == 'iPad'),
+				sun: /Solaris|SunOS/.test(p),
+				os: os[0].toLowerCase(),
 
-			platform: p,
-			agent: u
+				platform: p,
+				agent: u
+			}
+		);
+
+		UA.version = {
+			string: ''
+		};
+
+		if (UA.ie) {
+			UA.version.string = (/MSIE ([^;]+)/.exec(u) || versionDefaults)[1];
 		}
-	);
+		else if (UA.firefox) {
+			UA.version.string = (/Firefox\/(.+)/.exec(u) || versionDefaults)[1];
+		}
+		else if (UA.safari) {
+			UA.version.string = (/Version\/([^\s]+)/.exec(u) || versionDefaults)[1];
+		}
+		else if (UA.opera) {
+			UA.version.string = (/Opera\/([^\s]+)/.exec(u) || versionDefaults)[1];
+		}
 
-	UA.version = {
-		string: ''
+		UA.version.number = parseFloat(UA.version.string) || versionDefaults[0];
+		UA.version.major = (/([^\.]+)/.exec(UA.version.string) || versionDefaults)[1];
+
+		UA[UA.browser + UA.version.major] = true;
+
+		UA.renderer = '';
+
+		var documentElement = document.documentElement;
+
+		UA.dir = documentElement.getAttribute('dir') || 'ltr';
+
+		if (UA.ie) {
+			UA.renderer = 'trident';
+		}
+		else if (UA.gecko) {
+			UA.renderer = 'gecko';
+		}
+		else if (UA.webkit) {
+			UA.renderer = 'webkit';
+		}
+		else if (UA.opera) {
+			UA.renderer = 'presto';
+		}
+
+		A.UA = UA;
+
+		/*
+		* Browser selectors
+		*/
+
+		var selectors = [
+			UA.renderer,
+			UA.browser,
+			UA.browser + UA.version.major,
+			UA.os,
+			UA.dir,
+			'js'
+		];
+
+		if (UA.os == 'macintosh') {
+			selectors.push('mac');
+		}
+		else if (UA.os == 'windows') {
+			selectors.push('win');
+		}
+
+		if (UA.mobile) {
+			selectors.push('mobile');
+		}
+
+		if (UA.secure) {
+			selectors.push('secure');
+		}
+
+		UA.selectors = selectors.join(' ');
+
+		if (!documentElement._yuid) {
+			documentElement.className += ' ' + UA.selectors;
+
+			A.stamp(documentElement);
+		}
 	};
 
-	if (UA.ie) {
-		UA.version.string = (/MSIE ([^;]+)/.exec(u) || versionDefaults)[1];
-	}
-	else if (UA.firefox) {
-		UA.version.string = (/Firefox\/(.+)/.exec(u) || versionDefaults)[1];
-	}
-	else if (UA.safari) {
-		UA.version.string = (/Version\/([^\s]+)/.exec(u) || versionDefaults)[1];
-	}
-	else if (UA.opera) {
-		UA.version.string = (/Opera\/([^\s]+)/.exec(u) || versionDefaults)[1];
-	}
-
-	UA.version.number = parseFloat(UA.version.string) || versionDefaults[0];
-	UA.version.major = (/([^\.]+)/.exec(UA.version.string) || versionDefaults)[1];
-
-	UA[UA.browser + UA.version.major] = true;
-
-	UA.renderer = '';
-
-	if (UA.ie) {
-		UA.renderer = 'trident';
-	}
-	else if (UA.gecko) {
-		UA.renderer = 'gecko';
-	}
-	else if (UA.webkit) {
-		UA.renderer = 'webkit';
-	}
-	else if (UA.opera) {
-		UA.renderer = 'presto';
-	}
-
-	ALLOY.UA = UA;
+	AUI._uaExtensions(ALLOY);
 
 	/*
-	* Browser selectors
+	* Disable background image flickering in IE6
 	*/
 
-	var selectors = [
-		UA.renderer,
-		UA.browser,
-		UA.browser + UA.version.major,
-		UA.os,
-		'js'
-	];
-
-	if (UA.os == 'macintosh') {
-		selectors.push('mac');
+	if (UA.ie && UA.version.major <= 6) {
+		try {
+			document.execCommand('BackgroundImageCache', false, true);
+		}
+		catch (e) {
+		}
 	}
-	else if (UA.os == 'windows') {
-		selectors.push('win');
-	}
-
-	if (UA.mobile) {
-		selectors.push('mobile');
-	}
-
-	if (UA.secure) {
-		selectors.push('secure');
-	}
-
-	UA.selectors = selectors.join(' ');
-
-	document.getElementsByTagName('html')[0].className += ' ' + UA.selectors;
 })();
 
 
-}, 'gallery-2010.06.02-20-36' ,{requires:['gallery-aui-node','gallery-aui-component','gallery-aui-delayed-task','event','oop','widget-css','gallery-aui-skin-base'], skinnable:false});
+}, 'gallery-2010.08.18-17-12' ,{skinnable:false, requires:['gallery-aui-node-base','gallery-aui-component','gallery-aui-delayed-task','gallery-aui-selector','event','oop']});
