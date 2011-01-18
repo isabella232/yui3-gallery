@@ -1,103 +1,103 @@
-/*@cc_on@if(@_jscript_version<9)
-(function (window, document) {
-
-var DOCUMENT_ELEMENT = document.documentElement,
-	DOCUMENT_FRAGMENT = document.createDocumentFragment(),
-	HTML5_STYLESHEET = {},
-	HTML5_ELEMENTS = YUI.AUI.HTML5_ELEMENTS,
-	HTML5_ELEMENTS_STRING = HTML5_ELEMENTS.join('|'),
-	ELEMENTS_CACHE = [],
-	FIRST_CHILD = 'firstChild',
-	CREATE_ELEMENT = 'createElement',
-	a = -1;
-
-function appendStylesheet (media, cssText) {
-	if (HTML5_STYLESHEET[media]) {
-		HTML5_STYLESHEET[media].styleSheet.cssText += cssText;
+(function(win, doc, elemsArr, elemsArrLen, elems, isIE) {
+	if (!isIE || isIE >= 9) {
+		return;
 	}
-	else {
-		var head = DOCUMENT_ELEMENT[FIRST_CHILD],
-			style = document[CREATE_ELEMENT]('style');
 
-		style.media = media;
-		head.insertBefore(style, head[FIRST_CHILD]);
-		HTML5_STYLESHEET[media] = style;
-		appendStylesheet(media, cssText);
-	}
-}
+	var DOC_FRAG = doc.createDocumentFragment(),
+		EL_BODY = doc.createElement('body'),
+		EL_STYLE = doc.createElement('style'),
 
-function parseStyleSheetList (styleSheetList, media) {
-	var cssRuleList,
-		selectorText,
-		selectorTextMatch = new RegExp('\\b(' + HTML5_ELEMENTS_STRING + ')\\b(?!.*[;}])', 'gi'),
-		selectorTextReplace = function (m) {
-			return '.iepp_' + m;
-		},
-		a = -1;
+		HTML = doc.documentElement,
+		HEAD = HTML.firstChild,
 
-	while (++a < styleSheetList.length) {
-		media = styleSheetList[a].media || media;
+		REGEX_ELEM = new RegExp('(^|\\s)(' + elems + ')', 'gi'),
+		REGEX_RULE = new RegExp('(^|[^\\n]*?\\s)(' + elems + ')([^\\n]*)({[\\n\\w\\W]*?})', 'gi'),
+		REGEX_TAG = new RegExp('<(\/*)(' + elems + ')', 'gi');
 
-		parseStyleSheetList(styleSheetList[a].imports, media);
+	var body;
 
-		appendStylesheet(media, styleSheetList[a].cssText.replace(selectorTextMatch, selectorTextReplace));
-	}
-}
+	var shim = YUI.AUI.html5shiv;
 
-function onBeforePrint () {
-	var head = DOCUMENT_ELEMENT[FIRST_CHILD],
-		element,
-		elements = document.getElementsByTagName('*'),
-		elementCache,
-		elementName,
-		elementMatch = new RegExp('^' + HTML5_ELEMENTS_STRING + '$', 'i'),
-		elementReplace,
-		elementReplaced,
-		a = -1;
+	function getCSS(styleSheetList, mediaType) {
+		var a = -1;
+		var len = styleSheetList.length;
+		var styleSheet;
+		var cssTextArr = [];
 
-	while (++a < elements.length) {
-		if ((element = elements[a]) && (elementName = element.nodeName.match(elementMatch))) {
-			elementReplace = new RegExp('^\\s*<' + elementName + '(.*)\\/' + elementName + '>\\s*$', 'i');
+		while (++a < len) {
+			styleSheet = styleSheetList[a];
 
-			DOCUMENT_FRAGMENT.innerHTML = element.outerHTML.replace(/\r|\n/g, ' ').replace(elementReplace, (element.currentStyle.display == 'block') ? '<div$1/div>' : '<span$1/span>');
-
-			elementReplaced = DOCUMENT_FRAGMENT.childNodes[0];
-			elementReplaced.className += ' iepp_' + elementName;
-
-			elementCache = ELEMENTS_CACHE[ELEMENTS_CACHE.length] = [element, elementReplaced];
-
-			element.parentNode.replaceChild(elementCache[1], elementCache[0]);
+			if ((mediaType = styleSheet.media || mediaType) != 'screen') {
+				cssTextArr.push(getCSS(styleSheet.imports, mediaType), styleSheet.cssText);
+			}
 		}
+
+		return cssTextArr.join('');
 	}
 
-	parseStyleSheetList(document.styleSheets, 'all');
-}
+	shim(doc);
+	shim(DOC_FRAG);
 
-function onAfterPrint () {
-	var a = -1,
-		b;
+	HEAD.insertBefore(EL_STYLE, HEAD.firstChild);
 
-	while (++a < ELEMENTS_CACHE.length) {
-		ELEMENTS_CACHE[a][1].parentNode.replaceChild(ELEMENTS_CACHE[a][0], ELEMENTS_CACHE[a][1]);
-	}
+	EL_STYLE.media = 'print';
 
-	for (b in HTML5_STYLESHEET) {
-		DOCUMENT_ELEMENT[FIRST_CHILD].removeChild(HTML5_STYLESHEET[b]);
-	}
+	win.attachEvent(
+		'onbeforeprint',
+		function() {
+			var a = -1;
+			var b;
+			var cssText = getCSS(doc.styleSheets, 'all');
+			var cssTextArr = [];
+			var elem;
+			var node;
+			var nodeList;
+			var nodeListLen;
+			var rule;
 
-	HTML5_STYLESHEET = {};
-	ELEMENTS_CACHE = [];
-}
+			body = body || doc.body;
 
-while (++a < HTML5_ELEMENTS.length) {
-	document[CREATE_ELEMENT](HTML5_ELEMENTS[a]);
-	DOCUMENT_FRAGMENT[CREATE_ELEMENT](HTML5_ELEMENTS[a]);
-}
+			while ((rule = REGEX_RULE.exec(cssText)) != null) {
+				cssTextArr.push((rule[1] + rule[2] + rule[3]).replace(REGEX_ELEM, '$1.iepp_$2') + rule[4]);
+			}
 
-DOCUMENT_FRAGMENT = DOCUMENT_FRAGMENT.appendChild(document[CREATE_ELEMENT]('div'));
+			EL_STYLE.styleSheet.cssText = cssTextArr.join('\n');
 
-window.attachEvent('onbeforeprint', onBeforePrint);
-window.attachEvent('onafterprint', onAfterPrint);
+			while (++a < elemsArrLen) {
+				elem = elemsArr[a];
+				nodeList = doc.getElementsByTagName(elem);
 
-}(A.config.win, A.config.doc));
-@end@*/
+				nodeListLen = nodeList.length;
+
+				b = -1;
+
+				while (++b < nodeListLen) {
+					node = nodeList[b];
+
+					if (node.className.indexOf('iepp_') < 0) {
+						node.className += ' iepp_' + elem;
+					}
+				}
+			}
+
+			DOC_FRAG.appendChild(body);
+			HTML.appendChild(EL_BODY);
+
+			EL_BODY.className = body.className;
+
+			EL_BODY.innerHTML = body.innerHTML.replace(REGEX_TAG, '<$1font');
+		}
+	);
+
+	win.attachEvent(
+		'onafterprint',
+		function() {
+			EL_BODY.innerHTML = '';
+
+			HTML.removeChild(EL_BODY);
+			HTML.appendChild(body);
+
+			EL_STYLE.styleSheet.cssText = '';
+		}
+	);
+})(A.config.win, A.config.doc, YUI.AUI.HTML5_ELEMENTS, YUI.AUI.HTML5_ELEMENTS.length, YUI.AUI.HTML5_ELEMENTS.join('|'), A.UA.ie);
