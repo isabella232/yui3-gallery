@@ -6,9 +6,9 @@ shadow or rounded corners.
 
 /* ---------- CSS3 shadows ---------- */
 .yui3-dialog-content,
+.yui3-date-picker-content,
 .yui3-overlaycontextpanel-content,
 .yui3-tooltip-content,
-.yui3-calendar-content,
 .yui3-colorpicker-content,
 .yui3-tree-drag-helper-content {
 	-moz-box-shadow: 4px 4px 14px #777;

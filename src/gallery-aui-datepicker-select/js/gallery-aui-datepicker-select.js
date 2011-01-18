@@ -259,8 +259,18 @@ var DatePickerSelect = A.Component.create(
 			 * @type {Node | String}
 			 */
 			trigger: {
+				setter: function(v) {
+					if (v instanceof A.NodeList) {
+						return v;
+					}
+					else if (Lang.isString(v)) {
+						return A.all(v);
+					}
+
+					return new A.NodeList(v);
+				},
 				valueFn: function() {
-					return A.Node.create(WRAPPER_BUTTON_TPL);
+					return A.NodeList.create(WRAPPER_BUTTON_TPL);
 				}
 			},
 
@@ -281,8 +291,14 @@ var DatePickerSelect = A.Component.create(
 				validator: isArray
 			},
 
+			/**
+			 * <a href="Calendar.html">Calendar</a> configuration Object.</a>
+			 *
+			 * @attribute calendar
+			 * @default {}
+			 * @type Object
+			 */
 			calendar: {
-				setter: '_setCalendarConfig',
 				value: {}
 			},
 
@@ -347,8 +363,6 @@ var DatePickerSelect = A.Component.create(
 
 		EXTENDS: A.Component,
 
-		BIND_UI_ATTRS: ['calendar:disabled', 'calendar:dates', 'calendar:currentMonth'],
-
 		prototype: {
 			/**
 			 * Create the DOM structure for the DatePickerSelect. Lifecycle.
@@ -373,12 +387,9 @@ var DatePickerSelect = A.Component.create(
 			bindUI: function() {
 				var instance = this;
 
-				// instance.after('calendar:datesChange', instance._uiSetDates);
-				// instance.after('calendar:currentMonthChange', instance._uiSetCurrentMonth);
-
-				// instance.after('disabledChange', instance._afterDisabledChangeDatePicker);
-
 				instance._bindSelectEvents();
+
+				instance.after('calendar:select', instance._afterSelectDate);
 			},
 
 			/**
@@ -391,7 +402,33 @@ var DatePickerSelect = A.Component.create(
 				var instance = this;
 
 				instance._populateSelects();
-				instance._uiSetDates();
+				instance._syncSelectsUI();
+			},
+
+			/**
+			 * Descructor lifecycle implementation for the Datepicker class.
+			 * Purges events attached to the node (and all child nodes).
+			 *
+			 * @method destructor
+			 * @protected
+			 */
+			destructor: function() {
+				var instance = this;
+
+				instance.datePicker.destroy();
+			},
+
+			/**
+			 * Fires when a date is selected on the Calendar.
+			 *
+			 * @method _afterSelectDate
+			 * @param {Event} event
+			 * @protected
+			 */
+			_afterSelectDate: function(event) {
+				var instance = this;
+
+				instance._syncSelectsUI();
 			},
 
 			/**
@@ -446,15 +483,16 @@ var DatePickerSelect = A.Component.create(
 			_renderCalendar: function() {
 				var instance = this;
 
-				var calendarConfig = instance.get('calendar');
+				var datePickerConfig = {
+					calendar: instance.get(CALENDAR),
+					trigger: instance.get(TRIGGER).item(0)
+				};
 
-				calendarConfig.trigger = calendarConfig.trigger || instance.get(TRIGGER).item(0);
+				var datePicker = new A.DatePicker(datePickerConfig).render();
 
-				var calendar = new A.Calendar(calendarConfig).render();
-
-				calendar.addTarget(instance);
-
-				instance.calendar = calendar;
+				datePicker.addTarget(instance);
+				instance.datePicker = datePicker;
+				instance.calendar = datePicker.calendar;
 			},
 
 			/**
@@ -487,8 +525,6 @@ var DatePickerSelect = A.Component.create(
 				yearNode.set(NAME, instance.get(YEAR_NODE_NAME));
 				dayNode.set(NAME, instance.get(DAY_NODE_NAME));
 
-				// alert();
-				// console.log(instance.get(SRC_NODE), contentBox);
 				if (!monthNode.inDoc(A.config.doc)) {
 					// append elements
 					var selectWrapper = instance.get(SELECT_WRAPPER_NODE);
@@ -549,6 +585,20 @@ var DatePickerSelect = A.Component.create(
 
 				selects.on('change', instance._onSelectChange, instance);
 				selects.on('keypress', instance._onSelectChange, instance);
+			},
+
+			/**
+			 * Sync the UI of each DOM Select element.
+			 *
+			 * @method _syncSelectsUI
+			 * @protected
+			 */
+			_syncSelectsUI: function() {
+				var instance = this;
+
+				instance._selectCurrentDay();
+				instance._selectCurrentMonth();
+				instance._selectCurrentYear();
 			},
 
 			/**
@@ -735,7 +785,7 @@ var DatePickerSelect = A.Component.create(
 					instance._uiSetCurrentMonth();
 				}
 
-				instance.calendar._selectDate();
+				instance.calendar.selectCurrentDate();
 			},
 
 			/**
@@ -751,35 +801,6 @@ var DatePickerSelect = A.Component.create(
 
 				instance._populateDays();
 				instance._selectCurrentDay();
-			},
-
-			/**
-			 * Select the current values for the day, month and year to the respective
-		     * input field.
-			 *
-			 * @method _uiSetDates
-			 * @protected
-			 */
-			_uiSetDates: function(value) {
-				var instance = this;
-
-				instance._selectCurrentDay();
-				instance._selectCurrentMonth();
-				instance._selectCurrentYear();
-			},
-
-			_setCalendarConfig: function(value) {
-				var instance = this;
-
-				A.mix(
-					value,
-					{
-						setValue: false,
-						visible: false
-					}
-				);
-
-				return value;
 			}
 		}
 	}
