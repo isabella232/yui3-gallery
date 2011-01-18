@@ -6,6 +6,10 @@
 
 var Lang = A.Lang,
 
+	concat = function(arr, arr2) {
+		return (arr || []).concat(arr2 || []);
+	},
+
 	getClassName = A.ClassNameManager.getClassName,
 
 	NAME = 'component',
@@ -35,6 +39,8 @@ var Component = function(config) {
 	var instance = this;
 
 	instance._originalConfig = config;
+
+	instance._setRender(config);
 
 	Component.superclass.constructor.apply(this, arguments);
 
@@ -92,7 +98,7 @@ Component.ATTRS = {
 	 *
 	 * @attribute render
 	 * @default false
-	 * @type boolean
+	 * @type boolean | Node
 	 */
 	render: {
 		value: false,
@@ -195,6 +201,26 @@ A.extend(
 		},
 
 		/**
+		 * Renders the Component based upon a passed in interaction.
+		 *
+		 * @method _renderInteraction
+		 * @protected
+		 */
+		_renderInteraction: function(event, parentNode) {
+			var instance = this;
+
+			instance.render(parentNode);
+
+			var renderHandles = instance._renderHandles;
+
+			for (var i = renderHandles.length - 1; i >= 0; i--) {
+				var handle = renderHandles.pop();
+
+				handle.detach();
+			}
+		},
+
+		/**
 		 * Set the class names on the Component <code>contentBox</code>.
 		 *
 		 * @method _setComponentClassNames
@@ -214,6 +240,45 @@ A.extend(
 			}
 
 			instance.get('contentBox').addClass(buffer.join(' '));
+		},
+
+		/**
+		 * Set the interaction and render behavior based upon an object 
+		 * (intercepts the default rendering behavior).
+		 *
+		 * @method _setRender
+		 * @protected
+		 */
+		_setRender: function(config) {
+			var instance = this;
+
+			var render = config && config.render;
+
+			if (render && render.constructor == CONSTRUCTOR_OBJECT) {
+				var eventType = render.eventType || 'mousemove';
+				var parentNode = render.parentNode;
+				var selector = render.selector || parentNode;
+
+				if (selector) {
+					instance._renderHandles = [];
+
+					var renderHandles = instance._renderHandles;
+
+					if (!Lang.isArray(eventType)) {
+						eventType = [eventType];
+					}
+
+					var renderInteraction = A.rbind(instance._renderInteraction, instance, parentNode);
+
+					var interactionNode = A.one(selector);
+
+					 for (var i = eventType.length - 1; i >= 0; i--) {
+						renderHandles[i] = interactionNode.once(eventType[i], renderInteraction);
+					 }
+
+					delete config.render;
+				}
+			}
 		},
 
 		/**
@@ -247,6 +312,11 @@ Component.getById = function(id) {
 
 var COMP_PROTO = Component.prototype;
 
+var DEFAULT_UI_ATTRS = A.Widget.prototype._UI_ATTRS;
+
+var DEFAULT_BIND_ATTRS = DEFAULT_UI_ATTRS.BIND;
+var DEFAULT_SYNC_ATTRS = DEFAULT_UI_ATTRS.SYNC;
+
 Component.create = function(config) {
 	config = config || {};
 
@@ -262,17 +332,22 @@ Component.create = function(config) {
 
 	var configProto = config.prototype;
 
-	if (config.UI_ATTRS) {
-		configProto._BIND_UI_ATTRS = COMP_PROTO._BIND_UI_ATTRS.concat(config.UI_ATTRS);
-		configProto._SYNC_UI_ATTRS = COMP_PROTO._SYNC_UI_ATTRS.concat(config.UI_ATTRS);
-	}
+	if (configProto) {
+		var configProtoUIAttrs = configProto._UI_ATTRS || (configProto._UI_ATTRS = {
+			BIND: DEFAULT_BIND_ATTRS.slice(0),
+			SYNC: DEFAULT_SYNC_ATTRS.slice(0)
+		});
 
-	if (config.BIND_UI_ATTRS) {
-		configProto._BIND_UI_ATTRS = COMP_PROTO._BIND_UI_ATTRS.concat(config.BIND_UI_ATTRS);
-	}
+		var BIND_UI_ATTRS = concat(config.BIND_UI_ATTRS, config.UI_ATTRS);
+		var SYNC_UI_ATTRS = concat(config.SYNC_UI_ATTRS, config.UI_ATTRS);
 
-	if (config.SYNC_UI_ATTRS) {
-		configProto._SYNC_UI_ATTRS = COMP_PROTO._SYNC_UI_ATTRS.concat(config.SYNC_UI_ATTRS);
+		if (BIND_UI_ATTRS.length) {
+			configProtoUIAttrs.BIND = concat(COMP_PROTO._UI_ATTRS.BIND, BIND_UI_ATTRS);
+		}
+
+		if (SYNC_UI_ATTRS.length) {
+			configProtoUIAttrs.SYNC = concat(COMP_PROTO._UI_ATTRS.SYNC, SYNC_UI_ATTRS);
+		}
 	}
 
 	var augmentsClasses = config.AUGMENTS;
