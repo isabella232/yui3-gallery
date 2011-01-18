@@ -16,6 +16,8 @@ var Lang = A.Lang,
 
 	CONFIG = A.config,
 
+	NODE_PROTOTYPE = A.Node.prototype,
+
 	STR_EMPTY = '',
 
 	ARRAY_EMPTY_STRINGS = [STR_EMPTY, STR_EMPTY],
@@ -25,6 +27,8 @@ var Lang = A.Lang,
 	CSS_HELPER_HIDDEN = getClassName(HELPER, 'hidden'),
 	CSS_HELPER_UNSELECTABLE = getClassName(HELPER, 'unselectable'),
 
+	CHILD_NODES = 'childNodes',
+	CREATE_DOCUMENT_FRAGMENT = 'createDocumentFragment',
 	INNER_HTML = 'innerHTML',
 	NEXT_SIBLING = 'nextSibling',
 	NONE = 'none',
@@ -33,7 +37,26 @@ var Lang = A.Lang,
 
 	SUPPORT_CLONED_EVENTS = false,
 
-	VALUE = 'value';
+	VALUE = 'value',
+
+	MAP_BORDER = {
+		b: 'borderBottomWidth',
+		l: 'borderLeftWidth',
+		r: 'borderRightWidth',
+		t: 'borderTopWidth'
+	},
+	MAP_MARGIN = {
+		b: 'marginBottom',
+		l: 'marginLeft',
+		r: 'marginRight',
+		t: 'marginTop'
+	},
+	MAP_PADDING = {
+		b: 'paddingBottom',
+		l: 'paddingLeft',
+		r: 'paddingRight',
+		t: 'paddingTop'
+	};
 
 	/*
 		Parts of this file are used from jQuery (http://jquery.com)
@@ -42,7 +65,7 @@ var Lang = A.Lang,
 	var div = document.createElement('div');
 
 	div.style.display = 'none';
-	div.innerHTML = '   <link/><table></table>&nbsp;';
+	div.innerHTML = '   <table></table>&nbsp;';
 
 	if (div.attachEvent && div.fireEvent) {
 		div.attachEvent(
@@ -57,42 +80,11 @@ var Lang = A.Lang,
 		div.cloneNode(true).fireEvent('onclick');
 	}
 
-	var SUPPORT_SERIALIZE_HTML = !!div.getElementsByTagName('link').length,
-		SUPPORT_OPTIONAL_TBODY = !div.getElementsByTagName('tbody').length,
-		SUPPORT_LEADING_WHITESPACE = div.firstChild.nodeType === 3;
+	var SUPPORT_OPTIONAL_TBODY = !div.getElementsByTagName('tbody').length;
 
 	var REGEX_LEADING_WHITE_SPACE = /^\s+/,
 		REGEX_IE8_ACTION = /=([^=\x27\x22>\s]+\/)>/g,
-		REGEX_XHTML_TAG = /(<([\w:]+)[^>]*?)\/>/g,
-		REGEX_SELF_CLOSING_ELEMENT = /^(?:area|br|col|embed|hr|img|input|link|meta|param)$/i,
-		REGEX_TAGNAME = /<([\w:]+)/,
-		REGEX_TBODY = /<tbody/i,
-		REGEX_HTML = /<|&#?\w+;/,
-
-		FN_CLOSE_TAG = function(all, start, tagName) {
-			return REGEX_SELF_CLOSING_ELEMENT.test(tagName)
-					? all
-					: start + '></' + tagName + '>';
-		};
-
-	var MAP_WRAPPERS = {
-		_default: [0, STR_EMPTY, STR_EMPTY],
-		area: [1, '<map>', '</map>'],
-		col: [2, '<table><tbody></tbody><colgroup>', '</colgroup></table>'],
-		legend: [1, '<fieldset>', '</fieldset>'],
-		option: [1, '<select multiple="multiple">', '</select>'],
-		td: [3, '<table><tbody><tr>', '</tr></tbody></table>'],
-		thead: [1, '<table>', '</table>'],
-		tr: [2, '<table><tbody>', '</tbody></table>']
-	};
-
-	MAP_WRAPPERS.optgroup = MAP_WRAPPERS.option;
-	MAP_WRAPPERS.tbody = MAP_WRAPPERS.tfoot = MAP_WRAPPERS.colgroup = MAP_WRAPPERS.caption = MAP_WRAPPERS.thead;
-	MAP_WRAPPERS.th = MAP_WRAPPERS.td;
-
-	if (!SUPPORT_SERIALIZE_HTML) {
-		MAP_WRAPPERS._default = [1, 'div<div>', '</div>'];
-	}
+		REGEX_TAGNAME = /<([\w:]+)/;
 
 	div = null;
 
@@ -106,7 +98,7 @@ var Lang = A.Lang,
  * @constructor
  * @uses Node
  */
-A.mix(A.Node.prototype, {
+A.mix(NODE_PROTOTYPE, {
 	/**
 	 * <p>Returns the current ancestors of the node element. If a selector is
 	 * specified, the ancestors are filtered to match the selector.</p>
@@ -275,7 +267,7 @@ A.mix(A.Node.prototype, {
 
 					outerHTML = outerHTML.replace(REGEX_IE8_ACTION, '="$1">').replace(REGEX_LEADING_WHITE_SPACE, '');
 
-					clone = A.one(A.Node._prepareHTML(outerHTML)[0]);
+					clone = A.Node.create(outerHTML);
 				}
 				else {
 					clone = A.one(el.cloneNode());
@@ -363,6 +355,48 @@ A.mix(A.Node.prototype, {
 		var instance = this;
 
 		return A.Node.getDOMNode(instance);
+	},
+
+	/**
+     * Return the combined width of the border for the specified sides.
+     *
+     * @method getBorderWidth
+     * @param {string} sides Can be t, r, b, l or any combination of
+     * those to represent the top, right, bottom, or left sides.
+     * @return {number}
+     */
+	getBorderWidth: function(sides) {
+		var instance = this;
+
+		return instance._getBoxStyleAsNumber(sides, MAP_BORDER);
+	},
+
+	/**
+     * Return the combined size of the margin for the specified sides.
+     *
+     * @method getMargin
+     * @param {string} sides Can be t, r, b, l or any combination of
+     * those to represent the top, right, bottom, or left sides.
+     * @return {number}
+     */
+	getMargin: function(sides) {
+		var instance = this;
+
+		return instance._getBoxStyleAsNumber(sides, MAP_MARGIN);
+	},
+
+	/**
+     * Return the combined width of the border for the specified sides.
+     *
+     * @method getPadding
+     * @param {string} sides Can be t, r, b, l or any combination of
+     * those to represent the top, right, bottom, or left sides.
+     * @return {number}
+     */
+	getPadding: function(sides) {
+		var instance = this;
+
+		return instance._getBoxStyleAsNumber(sides, MAP_PADDING);
 	},
 
     /**
@@ -857,6 +891,38 @@ A.mix(A.Node.prototype, {
 		}
 	},
 
+	/**
+     * Return the combined size of the box style for the specified sides.
+     *
+     * @method _getBoxStyleAsNumber
+     * @param {string} sides Can be t, r, b, l or any combination of
+     * those to represent the top, right, bottom, or left sides.
+     * @param {string} map An object mapping mapping the "sides" param to the a CSS value to retrieve
+     * @return {number}
+     */
+	_getBoxStyleAsNumber: function(sides, map) {
+		var instance = this;
+
+		var sidesArray = sides.match(/\w/g);
+		var value = 0;
+		var side;
+		var sideKey;
+
+		for (var i = sidesArray.length - 1; i >= 0; i--) {
+			sideKey = sidesArray[i];
+			side = 0;
+
+			if (sideKey) {
+				side = parseFloat(instance.getComputedStyle(map[sideKey]));
+				side = Math.abs(side);
+
+				value += side || 0;
+			}
+		}
+
+		return value;
+	},
+
     /**
      * Extract text content from the passed nodes.
 	 *
@@ -999,7 +1065,10 @@ if (!SUPPORT_OPTIONAL_TBODY) {
 			if (isString(content)) {
 				tagName = (REGEX_TAGNAME.exec(content) || ARRAY_EMPTY_STRINGS)[1];
 			}
-			else if (content.nodeName) {
+			else if (content.nodeType && content.nodeType == 11 && content.childNodes.length) { // a doc frag
+				tagName = content.childNodes[0].nodeName;
+			}
+			else if (content.nodeName) { // a node
 				tagName = content.nodeName;
 			}
 
@@ -1019,74 +1088,9 @@ if (!SUPPORT_OPTIONAL_TBODY) {
 			}
 		}
 
-		A.DOM._ADD_HTML(node, content, where);
+		return A.DOM._ADD_HTML(node, content, where);
 	};
 }
-
-A.Node._prepareHTML = function(element) {
-	var doc = CONFIG.doc;
-
-	var returnData = [];
-
-	if (isString(element)) {
-		if (!REGEX_HTML.test(element)) {
-			element = doc.createTextNode(element);
-		}
-		else {
-			element = element.replace(REGEX_XHTML_TAG, FN_CLOSE_TAG);
-
-			var tagName = (REGEX_TAGNAME.exec(element) || ARRAY_EMPTY_STRINGS)[1].toLowerCase();
-			var wrap = MAP_WRAPPERS[tagName] || MAP_WRAPPERS._default;
-			var depth = wrap[0];
-			var div = doc.createElement('div');
-
-			div.innerHTML = wrap[1] + element + wrap[2];
-
-			while (depth--) {
-				div = div.lastChild;
-			}
-
-			if (!SUPPORT_OPTIONAL_TBODY) {
-				var hasTBody = REGEX_TBODY.test(element);
-				var tbody = [];
-
-				if (tagName == 'table' && !hasTBody) {
-					if (div.firstChild) {
-						tbody = div.firstChild.childNodes;
-					}
-				}
-				else {
-					if (wrap[1] == '<table>' && !hasTBody) {
-						tbody = div.childNodes;
-					}
-				}
-
-				for (var i = tbody.length - 1; i >= 0; --i) {
-					var node = tbody[i];
-
-					if (node.nodeName.toLowerCase() == 'tbody' && node.childNodes.length) {
-						node.parentNode.removeChild(node);
-					}
-				}
-			}
-
-			if (!SUPPORT_LEADING_WHITESPACE && REGEX_LEADING_WHITE_SPACE.test(element)) {
-				div.insertBefore(doc.createTextNode(REGEX_LEADING_WHITE_SPACE.exec(element)[0]), div.firstChild);
-			}
-
-			element = div.childNodes;
-		}
-	}
-
-	if (element.nodeType) {
-		returnData.push(element);
-	}
-	else {
-		returnData = element;
-	}
-
-	return returnData;
-};
 
 /**
  * Augment the <a href="NodeList.html">YUI3 NodeList</a> with more util methods.
@@ -1099,7 +1103,7 @@ A.Node._prepareHTML = function(element) {
  * @uses A.Node
  */
 A.NodeList.importMethod(
-	A.Node.prototype,
+	NODE_PROTOTYPE,
 	[
 		'after',
 
@@ -1180,7 +1184,7 @@ A.mix(
 		first: function() {
 			var instance = this;
 
-			return instacne.item(0);
+			return instance.item(0);
 		},
 
 		/**
@@ -1230,6 +1234,17 @@ A.mix(
 			}
 
 			return newNode;
+		}
+	}
+);
+
+A.mix(
+	A.NodeList,
+	{
+		create: function(html) {
+			var docFrag = A.getDoc().invoke(CREATE_DOCUMENT_FRAGMENT);
+
+			return docFrag.append(html).get(CHILD_NODES);
 		}
 	}
 );
