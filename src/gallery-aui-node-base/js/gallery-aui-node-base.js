@@ -7,32 +7,48 @@
 
 var Lang = A.Lang,
 	isArray = Lang.isArray,
+	isFunction = Lang.isFunction,
 	isObject = Lang.isObject,
 	isString = Lang.isString,
 	isUndefined = Lang.isUndefined,
 	isValue = Lang.isValue,
 
+	AArray = A.Array,
+	Node = A.Node,
+	NodeList = A.NodeList,
+
 	getClassName = A.ClassNameManager.getClassName,
+	getRegExp = A.DOM._getRegExp,
+
+	prefix = Lang.String.prefix,
 
 	CONFIG = A.config,
+	DOC = CONFIG.doc,
+	WIN = CONFIG.win,
 
-	NODE_PROTOTYPE = A.Node.prototype,
+	NODE_PROTO = Node.prototype,
+	NODELIST_PROTO = NodeList.prototype,
 
 	STR_EMPTY = '',
 
 	ARRAY_EMPTY_STRINGS = [STR_EMPTY, STR_EMPTY],
 
 	HELPER = 'helper',
+	OFFSET = 'offset',
 
+	CSS_HELPER_FORCE_OFFSET = getClassName(HELPER, 'force', OFFSET),
 	CSS_HELPER_HIDDEN = getClassName(HELPER, 'hidden'),
 	CSS_HELPER_UNSELECTABLE = getClassName(HELPER, 'unselectable'),
 
 	CHILD_NODES = 'childNodes',
 	CREATE_DOCUMENT_FRAGMENT = 'createDocumentFragment',
+	INNER = 'inner',
 	INNER_HTML = 'innerHTML',
 	NEXT_SIBLING = 'nextSibling',
 	NONE = 'none',
+	OUTER = 'outer',
 	PARENT_NODE = 'parentNode',
+	REGION = 'region',
 	SCRIPT = 'script',
 
 	SUPPORT_CLONED_EVENTS = false,
@@ -56,13 +72,21 @@ var Lang = A.Lang,
 		l: 'paddingLeft',
 		r: 'paddingRight',
 		t: 'paddingTop'
+	},
+
+	prefixSelector = function(ns, id) {
+		return '#' + prefix(ns, id);
+	},
+
+	formatSelectorNS = function(ns, selector) {
+		return selector.replace(getRegExp('(#|\\[id=(\\\"|\\\'))(?!' + ns + ')', 'g'), '$1' + ns);
 	};
 
 	/*
 		Parts of this file are used from jQuery (http://jquery.com)
 		Dual-licensed under MIT/GPL
 	*/
-	var div = document.createElement('div');
+	var div = DOC.createElement('div');
 
 	div.style.display = 'none';
 	div.innerHTML = '   <table></table>&nbsp;';
@@ -88,6 +112,10 @@ var Lang = A.Lang,
 
 	div = null;
 
+	Node.cssId = prefixSelector;
+
+	Node.formatSelectorNS = formatSelectorNS;
+
 /**
  * Augment the <a href="Node.html">YUI3 Node</a> with more util methods.
  *
@@ -98,7 +126,13 @@ var Lang = A.Lang,
  * @constructor
  * @uses Node
  */
-A.mix(NODE_PROTOTYPE, {
+A.mix(NODE_PROTO, {
+	allNS: function(ns, selector) {
+		var instance = this;
+
+		return instance.all(formatSelectorNS(ns, selector));
+	},
+
 	/**
 	 * <p>Returns the current ancestors of the node element. If a selector is
 	 * specified, the ancestors are filtered to match the selector.</p>
@@ -237,7 +271,13 @@ A.mix(NODE_PROTOTYPE, {
 				return instance;
 			}
 
-			return instance.get(name) || instance.getAttribute(name);
+			var currentValue = instance.get(name);
+
+			if (!Lang.isValue(currentValue)) {
+				currentValue = instance.getAttribute(name);
+			}
+
+			return currentValue;
 		}
 	},
 
@@ -265,9 +305,9 @@ A.mix(NODE_PROTOTYPE, {
 				if (el.nodeType != 3) {
 					var outerHTML = this.outerHTML();
 
-					outerHTML = outerHTML.replace(REGEX_IE8_ACTION, '="$1">').replace(REGEX_LEADING_WHITE_SPACE, '');
+					outerHTML = outerHTML.replace(REGEX_IE8_ACTION, '="$1">').replace(REGEX_LEADING_WHITE_SPACE, STR_EMPTY);
 
-					clone = A.Node.create(outerHTML);
+					clone = Node.create(outerHTML);
 				}
 				else {
 					clone = A.one(el.cloneNode());
@@ -287,7 +327,7 @@ A.mix(NODE_PROTOTYPE, {
 
 	/**
 	 * <p>Centralize the current Node instance with the passed
-     * <code>centerWith</code> Node, if not specified, the body will be
+     * <code>val</code> Array, Node, String, or Region, if not specified, the body will be
      * used.</p>
      *
      * Example:
@@ -299,20 +339,33 @@ A.mix(NODE_PROTOTYPE, {
 	 *
 	 * @method center
 	 * @chainable
-	 * @param {Node | String} centerWith Node to center with
+	 * @param {Array | Node | Region | String} val Array, Node, String, or Region to center with
 	 */
-	center: function(centerWith) {
-		var instance = this;
+	center: function(val) {
+		var instance = this,
+			nodeRegion = instance.get(REGION),
+			x,
+			y;
 
-		centerWith = (centerWith && A.one(centerWith)) || A.getBody();
+		if (isArray(val)) {
+			x = val[0];
+			y = val[1];
+		}
+		else {
+			var region;
 
-		var centerWithRegion = centerWith.get('region');
-		var nodeRegion = instance.get('region');
+			if (isObject(val) && !A.instanceOf(val, A.Node)) {
+				region = val;
+			}
+			else {
+				region = (A.one(val) || A.getBody()).get(REGION);
+			}
 
-		var xCenterWith = centerWithRegion.left + (centerWithRegion.width / 2);
-		var yCenterWith = centerWithRegion.top + (centerWithRegion.height / 2);
+			x = region.left + (region.width / 2);
+			y = region.top + (region.height / 2);
+		}
 
-		instance.setXY([xCenterWith - (nodeRegion.width / 2), yCenterWith - (nodeRegion.height / 2)]);
+		instance.setXY([x - (nodeRegion.width / 2), y - (nodeRegion.height / 2)]);
 	},
 
 	/**
@@ -335,7 +388,7 @@ A.mix(NODE_PROTOTYPE, {
 
 		instance.all('>*').remove().purge();
 
-		var el = A.Node.getDOMNode(instance);
+		var el = Node.getDOMNode(instance);
 
 		while (el.firstChild) {
 			el.removeChild(el.firstChild);
@@ -354,7 +407,7 @@ A.mix(NODE_PROTOTYPE, {
 	getDOM: function() {
 		var instance = this;
 
-		return A.Node.getDOMNode(instance);
+		return Node.getDOMNode(instance);
 	},
 
 	/**
@@ -369,6 +422,19 @@ A.mix(NODE_PROTOTYPE, {
 		var instance = this;
 
 		return instance._getBoxStyleAsNumber(sides, MAP_BORDER);
+	},
+
+	/**
+	 * Gets the current center position of the node in page coordinates.
+	 * @method getCenterXY
+	 * @for Node
+	 * @return {Array} The XY position of the node
+	*/
+	getCenterXY: function() {
+		var instance = this;
+		var region = instance.get(REGION);
+
+		return [(region.left + region.width/2), (region.top + region.height/2)];
 	},
 
 	/**
@@ -455,12 +521,8 @@ A.mix(NODE_PROTOTYPE, {
 
 		instance._hoverOptions = hoverOptions;
 
-		var overTask = new A.DelayedTask(instance._hoverOverTaskFn, instance);
-
-		var outTask = new A.DelayedTask(instance._hoverOutTaskFn, instance);
-
-		hoverOptions.overTask = overTask;
-		hoverOptions.outTask = outTask;
+		hoverOptions.overTask = A.debounce(instance._hoverOverTaskFn, null, instance);
+		hoverOptions.outTask = A.debounce(instance._hoverOutTaskFn, null, instance);
 
 		instance.on(hoverOptions.overEventType, instance._hoverOverHandler, instance);
 		instance.on(hoverOptions.outEventType, instance._hoverOutHandler, instance);
@@ -495,6 +557,12 @@ A.mix(NODE_PROTOTYPE, {
 		return this;
 	},
 
+	oneNS: function(ns, selector) {
+		var instance = this;
+
+		return instance.one(formatSelectorNS(ns, selector));
+	},
+
 	/**
 	 * Gets the outerHTML of a node, which islike innerHTML, except that it
 	 * actually contains the HTML of the node itself.
@@ -510,7 +578,7 @@ A.mix(NODE_PROTOTYPE, {
 			return domEl.outerHTML;
 		}
 
-		var temp = A.Node.create('<div></div>').append(
+		var temp = Node.create('<div></div>').append(
 			this.clone()
 		);
 
@@ -601,9 +669,26 @@ A.mix(NODE_PROTOTYPE, {
 	radioClass: function(cssClass) {
 		var instance = this;
 
-		instance.siblings().removeClass(cssClass);
+		var siblings = instance.siblings();
 
-		instance.addClass(cssClass);
+		if (isString(cssClass)) {
+			siblings.removeClass(cssClass);
+
+			instance.addClass(cssClass);
+		}
+		else if (isArray(cssClass)) {
+			var siblingNodes = siblings.getDOM();
+
+			var regex = getRegExp('(?:^|\\s+)(?:' + cssClass.join('|') + ')(?=\\s+|$)', 'g');
+			var node;
+
+			for (var i = siblingNodes.length - 1; i >= 0; i--) {
+				node = siblingNodes[i];
+				node.className = node.className.replace(regex, '');
+			}
+
+			instance.addClass(cssClass.join(' '));
+		}
 
 		return instance;
 	},
@@ -611,7 +696,7 @@ A.mix(NODE_PROTOTYPE, {
 	/**
 	 * Generate an unique identifier and reset the id attribute of the node
      * instance using the new value. Invokes the
-     * <a href="A.Node.html#method_guid">guid</a>.
+     * <a href="Node.html#method_guid">guid</a>.
 	 *
 	 * @method resetId
 	 * @chainable
@@ -660,7 +745,7 @@ A.mix(NODE_PROTOTYPE, {
 				textField.select();
 			}
 
-			if (textField != document.activeElement) {
+			if (textField != DOC.activeElement) {
 				textField.focus();
 			}
 		}
@@ -683,8 +768,8 @@ A.mix(NODE_PROTOTYPE, {
 
 		instance.setStyles(
 			{
-				'MozUserSelect': '',
-				'KhtmlUserSelect': ''
+				'MozUserSelect': STR_EMPTY,
+				'KhtmlUserSelect': STR_EMPTY
 			}
 		);
 
@@ -724,7 +809,7 @@ A.mix(NODE_PROTOTYPE, {
 		};
 
 		if(isArray(eventName)) {
-			A.Array.each(
+			AArray.each(
 				eventName,
 				function(name) {
 					instance.on(name, fn);
@@ -903,7 +988,7 @@ A.mix(NODE_PROTOTYPE, {
 			}
 		}
 
-		return str.join('');
+		return str.join(STR_EMPTY);
 	},
 
 	/**
@@ -918,7 +1003,7 @@ A.mix(NODE_PROTOTYPE, {
 
 		var hoverOptions = instance._hoverOptions;
 
-		hoverOptions.outTask.delay(hoverOptions.outDelay, null, null, [event]);
+		hoverOptions.outTask.delay(hoverOptions.outDelay, event);
 	},
 
 	/**
@@ -933,7 +1018,7 @@ A.mix(NODE_PROTOTYPE, {
 
 		var hoverOptions = instance._hoverOptions;
 
-		hoverOptions.overTask.delay(hoverOptions.overDelay, null, null, [event]);
+		hoverOptions.overTask.delay(hoverOptions.overDelay, event);
 	},
 
 	/**
@@ -985,7 +1070,7 @@ A.mix(NODE_PROTOTYPE, {
 
 		if (parent) {
 			if (isString(newNode)) {
-				newNode = A.Node.create(newNode);
+				newNode = Node.create(newNode);
 			}
 
 			parent.insertBefore(newNode, refNode);
@@ -1004,14 +1089,14 @@ A.mix(NODE_PROTOTYPE, {
 	}
 }, true);
 
-NODE_PROTOTYPE.__show = NODE_PROTOTYPE._show;
-NODE_PROTOTYPE.__hide = NODE_PROTOTYPE._hide;
-NODE_PROTOTYPE.__isHidden = NODE_PROTOTYPE._isHidden;
+NODE_PROTO.__show = NODE_PROTO._show;
+NODE_PROTO.__hide = NODE_PROTO._hide;
+NODE_PROTO.__isHidden = NODE_PROTO._isHidden;
 
-NODE_PROTOTYPE._isHidden = function() {
+NODE_PROTO._isHidden = function() {
 	var instance = this;
 
-	return NODE_PROTOTYPE.__isHidden.call(instance) || instance.hasClass(instance._hideClass || CSS_HELPER_HIDDEN);
+	return NODE_PROTO.__isHidden.call(instance) || instance.hasClass(instance._hideClass || CSS_HELPER_HIDDEN);
 };
 /**
  * <p>Hide the node adding a css class on it. If <code>cssClass</code> is not
@@ -1026,7 +1111,7 @@ NODE_PROTOTYPE._isHidden = function() {
  * @chainable
  * @param {string} cssClass Class name to hide the element. Optional.
  */
-NODE_PROTOTYPE._hide = function() {
+NODE_PROTO._hide = function() {
 	var instance = this;
 
 	instance.addClass(instance._hideClass || CSS_HELPER_HIDDEN);
@@ -1048,7 +1133,7 @@ NODE_PROTOTYPE._hide = function() {
  * @chainable
  * @param {string} cssClass Class name to hide the element. Optional.
  */
-NODE_PROTOTYPE._show = function() {
+NODE_PROTO._show = function() {
 	var instance = this;
 
 	instance.removeClass(instance._hideClass || CSS_HELPER_HIDDEN);
@@ -1056,13 +1141,175 @@ NODE_PROTOTYPE._show = function() {
 	return instance;
 };
 
+/**
+ * Returns the width of the content, not including
+ * the padding, border or margin. If a width is passed,
+ * the node's overall width is set to that size.
+ *
+ * Example:
+ *
+ * <pre><code>var node = A.one('#nodeId');
+ * node.width(); //returns content width
+ * node.width(100); // sets box width
+ * </code></pre>
+ *
+ * @method width
+ * @return {number}
+ */
+
+/**
+ * Returns the height of the content, not including
+ * the padding, border or margin. If a height is passed,
+ * the node's overall height is set to that size.
+ *
+ * Example:
+ *
+ * <pre><code>var node = A.one('#nodeId');
+ * node.height(); //returns content height
+ * node.height(100); // sets box height
+ * </code></pre>
+ *
+ * @method height
+ * @return {number}
+ */
+
+/**
+ * Returns the size of the box from inside of the border,
+ * which is the offsetWidth plus the padding on the left and right.
+ *
+ * Example:
+ *
+ * <pre><code>var node = A.one('#nodeId');
+ * node.innerWidth();
+ * </code></pre>
+ *
+ * @method innerWidth
+ * @return {number}
+ */
+
+/**
+ * Returns the size of the box from inside of the border,
+ * which is offsetHeight plus the padding on the top and bottom.
+ *
+ * Example:
+ *
+ * <pre><code>var node = A.one('#nodeId');
+ * node.innerHeight();
+ * </code></pre>
+ *
+ * @method innerHeight
+ * @return {number}
+ */
+
+/**
+ * Returns the outer width of the box including the border,
+ * if true is passed as the first argument, the margin is included.
+ *
+ * Example:
+ *
+ * <pre><code>var node = A.one('#nodeId');
+ * node.outerWidth();
+ * node.outerWidth(true); // includes margin
+ * </code></pre>
+ *
+ * @method outerWidth
+ * @return {number}
+ */
+
+/**
+ * Returns the outer height of the box including the border,
+ * if true is passed as the first argument, the margin is included.
+ *
+ * Example:
+ *
+ * <pre><code>var node = A.one('#nodeId');
+ * node.outerHeight();
+ * node.outerHeight(true); // includes margin
+ * </code></pre>
+ *
+ * @method outerHeight
+ * @return {number}
+ */
+
+A.each(
+	['Height', 'Width'],
+	function(item, index, collection) {
+		var sides = index ? 'lr' : 'tb';
+
+		var dimensionType = item.toLowerCase();
+
+		NODE_PROTO[dimensionType] = function(size) {
+			var instance = this;
+
+			var returnValue = instance;
+
+			if (isUndefined(size)) {
+				var node = instance._node;
+				var dimension;
+
+				if (node) {
+					if ((!node.tagName && node.nodeType === 9) || node.alert) {
+						dimension = instance.get(REGION)[dimensionType];
+					}
+					else {
+						dimension = instance.get(OFFSET + item);
+
+						var previous = {};
+						var styleObj = node.style;
+
+						if (!dimension) {
+							instance.addClass(CSS_HELPER_FORCE_OFFSET);
+
+							dimension = instance.get(OFFSET + item);
+
+							instance.removeClass(CSS_HELPER_FORCE_OFFSET);
+						}
+
+						if (dimension) {
+							dimension -= (instance.getPadding(sides) + instance.getBorderWidth(sides));
+						}
+					}
+				}
+
+				returnValue = dimension;
+			}
+			else {
+				instance.setStyle(dimensionType, size);
+			}
+
+			return returnValue;
+		};
+
+		NODE_PROTO[INNER + item] = function() {
+			var instance = this;
+
+			return instance[dimensionType]() + instance.getPadding(sides);
+		};
+
+		NODE_PROTO[OUTER + item] = function(margin) {
+			var instance = this;
+
+			var innerSize = instance[INNER + item]();
+			var borderSize = instance.getBorderWidth(sides);
+
+			var size = innerSize + borderSize;
+
+			if (margin) {
+				size += instance.getMargin(sides);
+			}
+
+			return size;
+		};
+	}
+);
+
 if (!SUPPORT_OPTIONAL_TBODY) {
 	A.DOM._ADD_HTML = A.DOM.addHTML;
 
 	A.DOM.addHTML = function(node, content, where) {
-		var nodeName = (node.nodeName && node.nodeName.toLowerCase()) || '';
+		var nodeName = (node.nodeName && node.nodeName.toLowerCase()) || STR_EMPTY;
 
-		var tagName;
+		var tagName = STR_EMPTY;
 
 		if (!isUndefined(content)) {
 			if (isString(content)) {
@@ -1075,7 +1322,7 @@ if (!SUPPORT_OPTIONAL_TBODY) {
 				tagName = content.nodeName;
 			}
 
-			tagName = tagName.toLowerCase();
+			tagName = tagName && tagName.toLowerCase();
 		}
 
 		if (nodeName == 'table' && tagName == 'tr') {
@@ -1105,8 +1352,8 @@ if (!SUPPORT_OPTIONAL_TBODY) {
  * @constructor
  * @uses A.Node
  */
-A.NodeList.importMethod(
-	NODE_PROTOTYPE,
+NodeList.importMethod(
+	NODE_PROTO,
 	[
 		'after',
 
@@ -1122,7 +1369,15 @@ A.NodeList.importMethod(
 
 		'html',
 
+		'innerHeight',
+
+		'innerWidth',
+
+		'outerHeight',
+
 		'outerHTML',
+
+		'outerWidth',
 
 		'prepend',
 
@@ -1145,7 +1400,7 @@ A.NodeList.importMethod(
 );
 
 A.mix(
-	A.NodeList.prototype,
+	NODELIST_PROTO,
 	{
 		/**
 	     * See <a href="Node.html#method_all">Node all</a>.
@@ -1169,9 +1424,15 @@ A.mix(
 				}
 			}
 
-			newNodeList = A.Array.unique(newNodeList);
+			newNodeList = AArray.unique(newNodeList);
 
 			return A.all(newNodeList);
+		},
+
+		allNS: function(ns, selector) {
+			var instance = this;
+
+			return instance.all(formatSelectorNS(ns, selector));
 		},
 
 		/**
@@ -1194,7 +1455,7 @@ A.mix(
 		getDOM: function() {
 			var instance = this;
 
-			return A.NodeList.getDOMNodes(this);
+			return NodeList.getDOMNodes(this);
 		},
 
 		/**
@@ -1233,12 +1494,45 @@ A.mix(
 			}
 
 			return newNode;
+		},
+
+		oneNS: function(ns, selector) {
+			var instance = this;
+
+			return instance.one(formatSelectorNS(ns, selector));
 		}
 	}
 );
 
+NODELIST_PROTO.__filter = NODELIST_PROTO.filter;
+
+NODELIST_PROTO.filter = function(value, context) {
+	var instance = this;
+
+	var newNodeList;
+
+	if (isFunction(value)) {
+		var nodes = [];
+
+		instance.each(
+			function(item, index, collection) {
+				if (value.call(context || item, item, index, collection)) {
+					nodes.push(item._node);
+				}
+			}
+		);
+
+		newNodeList = A.all(nodes);
+	}
+	else {
+		newNodeList = NODELIST_PROTO.__filter.call(instance, value);
+	}
+
+	return newNodeList;
+};
+
 A.mix(
-	A.NodeList,
+	NodeList,
 	{
 		create: function(html) {
 			var docFrag = A.getDoc().invoke(CREATE_DOCUMENT_FRAGMENT);
@@ -1260,7 +1554,7 @@ A.mix(
 			var instance = this;
 
 			if (!instance._bodyNode) {
-				instance._bodyNode = A.one(CONFIG.doc.body);
+				instance._bodyNode = A.one(DOC.body);
 			}
 
 			return instance._bodyNode;
@@ -1275,7 +1569,7 @@ A.mix(
 			var instance = this;
 
 			if (!instance._documentNode) {
-				instance._documentNode = A.one(CONFIG.doc);
+				instance._documentNode = A.one(DOC);
 			}
 
 			return instance._documentNode;
@@ -1290,10 +1584,40 @@ A.mix(
 			var instance = this;
 
 			if (!instance._windowNode) {
-				instance._windowNode = A.one(CONFIG.win);
+				instance._windowNode = A.one(WIN);
 			}
 
 			return instance._windowNode;
 		}
+	}
+);
+
+A.queryNS = function(ns, selector, methodName) {
+	return A[methodName || 'one'](formatSelectorNS(ns, selector));
+};
+
+A.oneNS = A.queryNS;
+
+A.allNS = function(ns, selector) {
+	return A.queryNS(ns, selector, 'all');
+}
+
+A.byIdNS = function(ns, id) {
+	return A.one(prefixSelector(ns, id));
+};
+
+// Patch for http://yuilibrary.com/projects/yui3/ticket/2531537
+
+var addMethod = NodeList.addMethod;
+
+AArray.each(
+	['hide', 'show'],
+	function(item, index, collection) {
+		addMethod(
+			item,
+			function() {
+				return this[item].apply(this, arguments);
+			}
+		);
 	}
 );
