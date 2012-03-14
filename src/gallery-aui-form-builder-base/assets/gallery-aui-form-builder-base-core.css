@@ -1,0 +1,18 @@
+/* work around Y.Widget zIndex bug */
+.yui3-basecelleditor {
+	z-index: 500 !important;
+}
+
+.yui3-diagram-builder-fields-container .yui3-form-builder-placeholder {
+	display: none;
+}
+
+.yui3-form-builder-placeholder {
+	border: 1px dashed #CCCCCC;
+	height: 2px;
+	margin: 5px;
+}
+
+.yui3-form-builder-options-editor-hidden {
+	display: none;
+}
