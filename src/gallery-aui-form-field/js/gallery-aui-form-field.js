@@ -4,6 +4,8 @@ var Lang = A.Lang,
 
 	NAME = 'field',
 
+	SPACE = ' ',
+
 	getTypeClassName = A.cached(
 		function(type, prefix) {
 			var base = ['field'];
@@ -25,11 +27,17 @@ var Lang = A.Lang,
 	),
 
 	CSS_FIELD = getClassName(NAME),
+
+	CSS_FIELD_CHECKBOX = getClassName(NAME, 'checkbox'),
+	CSS_FIELD_CHOICE = getClassName(NAME, 'choice'),
+
 	CSS_FIELD_CONTENT = getClassName(NAME, 'content'),
 	CSS_FIELD_INPUT = getClassName(NAME, 'input'),
 	CSS_FIELD_HINT = getClassName(NAME, 'hint'),
 	CSS_FIELD_INVALID = getClassName(NAME, 'invalid'),
 	CSS_FIELD_LABEL = getClassName(NAME, 'label'),
+
+	CSS_FIELD_RADIO = getClassName(NAME, 'radio'),
 
 	CSS_LABELS = getClassName(NAME, 'labels'),
 	CSS_LABELS_INLINE = getClassName(NAME, 'labels', 'inline'),
@@ -38,6 +46,11 @@ var Lang = A.Lang,
 		left: [CSS_LABELS, 'left'].join('-'),
 		right: [CSS_LABELS, 'right'].join('-'),
 		top: [CSS_LABELS, 'top'].join('-')
+	},
+
+	MAP_CSS_FIELD_TYPES = {
+		radio: CSS_FIELD_RADIO,
+		checkbox: CSS_FIELD_CHECKBOX
 	},
 
 	REGEX_INLINE_LABEL = /left|right/,
@@ -68,6 +81,11 @@ var Field = A.Component.create(
 				}
 			},
 
+			disabled: {
+				value: false,
+				validator: Lang.isBoolean
+			},
+
 			id: {
 				getter: function(value) {
 					var instance = this;
@@ -88,11 +106,16 @@ var Field = A.Component.create(
 
 			type: {
 				value: 'text',
+				validator: Lang.isString,
 				writeOnce: true
 			},
 
 			labelAlign: {
-				value: ''
+				valueFn: function() {
+					var instance = this;
+
+					return instance._getChoiceCss() ? 'left' : null;
+				}
 			},
 
 			labelNode: {
@@ -201,6 +224,7 @@ var Field = A.Component.create(
 		},
 
 		BIND_UI_ATTRS: [
+			'disabled',
 			'id',
 			'readOnly',
 			'name',
@@ -364,7 +388,7 @@ var Field = A.Component.create(
 
 				var fieldTemplate = instance.FIELD_TEMPLATE;
 
-				instance.FIELD_TEMPLATE = A.substitute(
+				instance.FIELD_TEMPLATE = Lang.sub(
 					fieldTemplate,
 					{
 						cssClass: CSS_FIELD_INPUT,
@@ -375,6 +399,14 @@ var Field = A.Component.create(
 				);
 
 				return A.Node.create(instance.FIELD_TEMPLATE);
+			},
+
+			_getChoiceCss: function() {
+				var instance = this;
+
+				var type = instance.get('type');
+
+				return MAP_CSS_FIELD_TYPES[type];
 			},
 
 			_getNodeValue: function() {
@@ -395,7 +427,16 @@ var Field = A.Component.create(
 
 				var type = instance.get('type');
 
-				boundingBox.addClass(getTypeClassName(type));
+				var cssClass = [getTypeClassName(type)];
+
+				var choiceCss = instance._getChoiceCss();
+
+				if (choiceCss) {
+					cssClass.push(CSS_FIELD_CHOICE);
+					cssClass.push(choiceCss);
+				}
+
+				boundingBox.addClass(cssClass.join(SPACE));
 				node.addClass(getTypeClassName(type, 'input'));
 
 				if (!contentBox.contains(node)) {
@@ -442,8 +483,18 @@ var Field = A.Component.create(
 					instance._uiSetLabelAlign(instance.get('labelAlign'));
 
 					var contentBox = instance.get('contentBox');
+					var labelAlign = instance.get('labelAlign');
+					var type = instance.get('type').toLowerCase();
 
-					contentBox.prepend(labelNode);
+					var isLabelInline = REGEX_INLINE_LABEL.test(labelAlign);
+
+					var action = 'prepend';
+
+					if (isLabelInline && instance._getChoiceCss()) {
+						action = 'append';
+					}
+
+					contentBox[action](labelNode);
 				}
 			},
 
@@ -453,6 +504,18 @@ var Field = A.Component.create(
 				instance._uiSetValue(value);
 
 				return value;
+			},
+
+			_uiSetDisabled: function(val) {
+				var instance = this;
+				var node = instance.get('node');
+
+				if (val) {
+					node.setAttribute('disabled', val);
+				}
+				else {
+					node.removeAttribute('disabled');
+				}
 			},
 
 			_uiSetFieldHint: function(newVal, prevVal) {
