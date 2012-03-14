@@ -14,6 +14,8 @@
 var L = A.Lang,
 	isString = L.isString,
 
+	DOC = A.config.doc,
+
 	APPEND = 'append',
 	DOCUMENT_ELEMENT = 'documentElement',
 	FIRST_CHILD = 'firstChild',
@@ -118,7 +120,7 @@ var ParseContent = A.Component.create(
 				var head = doc.one(HEAD) || doc.get(DOCUMENT_ELEMENT);
 
 				// NOTE: A.Node.create('<script></script>') doesn't work correctly on Opera
-				var newScript = document.createElement(SCRIPT);
+				var newScript = DOC.createElement(SCRIPT);
 
 				newScript.type = 'text/javascript';
 
@@ -159,8 +161,7 @@ var ParseContent = A.Component.create(
 			_bindAOP: function() {
 				var instance = this;
 
-				// overloading node.insert() arguments, affects append/prepend methods
-				this.doBefore('insert', function(content) {
+				var cleanFirstArg = function(content) {
 					var args = Array.prototype.slice.call(arguments);
 					var output = instance.parseContent(content);
 
@@ -168,14 +169,19 @@ var ParseContent = A.Component.create(
 					args.splice(0, 1, output.fragment);
 
 					return new A.Do.AlterArgs(null, args);
-				});
+				};
 
-				// overloading node.setContent() arguments
-				this.doBefore('setContent', function(content) {
+				this.doBefore('insert', cleanFirstArg);
+				this.doBefore('replaceChild', cleanFirstArg);
+
+				var cleanArgs = function(content) {
 					var output = instance.parseContent(content);
 
 					return new A.Do.AlterArgs(null, [output.fragment]);
-				});
+				};
+
+				this.doBefore('replace', cleanArgs);
+				this.doBefore('setContent', cleanArgs);
 			},
 
 			/**
