@@ -31,6 +31,7 @@ var L = A.Lang,
 	NEXT = 'next',
 	NEXT_PAGE_LINK = 'nextPageLink',
 	NEXT_PAGE_LINK_LABEL = 'nextPageLinkLabel',
+	OPTION = 'option',
 	PAGE = 'page',
 	PAGE_CONTAINER_TEMPLATE = 'pageContainerTemplate',
 	PAGE_LINK_CONTENT = 'pageLinkContent',
@@ -48,6 +49,7 @@ var L = A.Lang,
 	ROWS_PER_PAGE_EL = 'rowsPerPageEl',
 	ROWS_PER_PAGE_OPTIONS = 'rowsPerPageOptions',
 	SELECT = 'select',
+	SELECTED = 'selected',
 	SPACE = ' ',
 	STATE = 'state',
 	TEMPLATE = 'template',
@@ -69,6 +71,8 @@ var L = A.Lang,
 	},
 
 	getCN = A.ClassNameManager.getClassName,
+
+	IE = A.UA.ie,
 
 	CSS_PAGINATOR = getCN(PAGINATOR),
 	CSS_PAGINATOR_CONTAINER = getCN(PAGINATOR, CONTAINER),
@@ -403,7 +407,7 @@ var Paginator = A.Component.create(
 				getter: function() {
 					var instance = this;
 
-					return A.substitute(PAGE_REPORT_LABEL_TPL, {
+					return L.sub(PAGE_REPORT_LABEL_TPL, {
 						page: instance.get(PAGE),
 						totalPages: instance.get(TOTAL_PAGES)
 					});
@@ -478,6 +482,20 @@ var Paginator = A.Component.create(
 			 */
 			rowsPerPageEl: {
 				setter: A.one,
+				getter: function(val) {
+					var instance = this;
+					var options = val.all(OPTION);
+
+					options.removeAttribute(SELECTED);
+
+					var selected = options.filter('[value=' + instance.get(ROWS_PER_PAGE) + ']');
+
+					if (selected) {
+						selected.setAttribute(SELECTED, SELECTED);
+					}
+
+					return val;
+				},
 				valueFn: function() {
 					return A.Node.create(ROWS_PER_PAGE_TPL);
 				}
@@ -523,9 +541,7 @@ var Paginator = A.Component.create(
 			 * @type Number
 			 */
 			total: {
-				setter: function(v) {
-					return this._setTotal(v);
-				},
+				setter: '_setTotal',
 				value: 0,
 				validator: isNumber
 			},
@@ -539,7 +555,7 @@ var Paginator = A.Component.create(
 			 */
 			totalEl: {
 				setter: A.one,
-				valueFn: function() {
+				getter: function() {
 					var label = this.get(TOTAL_LABEL);
 
 					return A.Node.create(TOTAL_TPL).html(label);
@@ -557,7 +573,7 @@ var Paginator = A.Component.create(
 				getter: function() {
 					var instance = this;
 
-					return A.substitute(TOTAL_LABEL_TPL, {
+					return L.sub(TOTAL_LABEL_TPL, {
 						total: instance.get(TOTAL)
 					});
 				},
@@ -953,15 +969,12 @@ var Paginator = A.Component.create(
 			_getTemplate: function(v) {
 				var instance = this;
 
-				var outer = function(key) {
-					return instance.get(key).outerHTML();
-				};
-
 				// if template is not cached...
 				if (!instance.templatesCache) {
 					var page = 0;
-					var totalPages = instance.get(TOTAL_PAGES);
+
 					var maxPageLinks = instance.get(MAX_PAGE_LINKS);
+
 					var pageContainer = instance.get(PAGE_CONTAINER_TEMPLATE);
 
 					// crate the anchor to be the page links
@@ -971,8 +984,18 @@ var Paginator = A.Component.create(
 						);
 					}
 
+					var outer = function(key) {
+						return instance.get(key).outerHTML();
+					};
+
+					var rowsPerPageSelect = outer(ROWS_PER_PAGE_EL);
+
+					if (IE >= 9) {
+						rowsPerPageSelect = rowsPerPageSelect.replace(/selected=""/gi, '');
+					}
+
 					// substitute the {keys} on the templates with the real outerHTML templates
-					instance.templatesCache = A.substitute(v,
+					instance.templatesCache = L.sub(v,
 						{
 							CurrentPageReport: outer(PAGE_REPORT_EL),
 							FirstPageLink: outer(FIRST_PAGE_LINK),
@@ -980,7 +1003,7 @@ var Paginator = A.Component.create(
 							NextPageLink: outer(NEXT_PAGE_LINK),
 							PageLinks: pageContainer.outerHTML(),
 							PrevPageLink: outer(PREV_PAGE_LINK),
-							RowsPerPageSelect: outer(ROWS_PER_PAGE_EL),
+							RowsPerPageSelect: rowsPerPageSelect,
 							Total: outer(TOTAL_EL)
 						}
 					);
@@ -1017,16 +1040,14 @@ var Paginator = A.Component.create(
 			 */
 			_setTotal: function(v) {
 				var instance = this;
+
 				var alwaysVisible = instance.get(ALWAYS_VISIBLE);
 				var containers = instance.get(CONTAINERS);
 
 				// if !alwaysVisible and there is nothing to show, hide it
-				if (!alwaysVisible && (v === 0)) {
-					containers.hide();
-				}
-				else {
-					containers.show();
-				}
+				var visible = (alwaysVisible || (v !== 0 && v > instance.get(ROWS_PER_PAGE)));
+
+				containers.toggle(visible);
 
 				return v;
 			},
