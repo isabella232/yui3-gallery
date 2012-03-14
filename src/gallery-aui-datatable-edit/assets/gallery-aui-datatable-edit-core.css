@@ -1,0 +1,35 @@
+.yui3-datatable-editable {
+	cursor: pointer;
+}
+
+.yui3-basecelleditor .yui3-buttonitem-content {
+	margin: 2px 0;
+	padding: 3px 3px 1px 1px;
+}
+
+.yui3-basecelleditor .yui3-buttonitem-label-only {
+	padding-bottom: 2px;
+}
+
+.webkit .yui3-basecelleditor .yui3-buttonitem-label-only {
+	padding-bottom: 3px;
+}
+
+.yui3-checkboxcelleditor .yui3-celleditor-label,
+.yui3-radiocelleditor .yui3-celleditor-label {
+	padding-left: 3px;
+}
+
+.yui3-checkboxcelleditor .yui3-celleditor-wrapper,
+.yui3-radiocelleditor .yui3-celleditor-wrapper {
+	display: block;
+	clear: both;
+	padding: 2px 0;
+}
+
+.yui3-celleditor-edit-dd-handle {
+	cursor: move;
+    display: inline-block;
+    margin-top: -3px;
+    vertical-align: middle;
+}
