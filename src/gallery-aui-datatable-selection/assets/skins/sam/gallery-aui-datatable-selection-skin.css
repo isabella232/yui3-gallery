@@ -1,0 +1,16 @@
+.yui3-skin-sam tr.yui3-datatable-even td.yui3-datatable-asc.yui3-datatable-cell-selected,
+.yui3-skin-sam tr.yui3-datatable-even td.yui3-datatable-desc.yui3-datatable-cell-selected,
+.yui3-skin-sam tr.yui3-datatable-odd td.yui3-datatable-asc.yui3-datatable-cell-selected,
+.yui3-skin-sam tr.yui3-datatable-odd td.yui3-datatable-desc.yui3-datatable-cell-selected,
+.yui3-skin-sam tr.yui3-datatable-even.yui3-datatable-row-selected td.yui3-datatable-asc,
+.yui3-skin-sam tr.yui3-datatable-even.yui3-datatable-row-selected td.yui3-datatable-desc,
+.yui3-skin-sam tr.yui3-datatable-odd.yui3-datatable-row-selected td.yui3-datatable-asc,
+.yui3-skin-sam tr.yui3-datatable-odd.yui3-datatable-row-selected td.yui3-datatable-desc,
+.yui3-skin-sam tr.yui3-datatable-even td.yui3-datatable-cell-selected,
+.yui3-skin-sam tr.yui3-datatable-odd td.yui3-datatable-cell-selected,
+.yui3-skin-sam tr.yui3-datatable-even.yui3-datatable-row-selected td,
+.yui3-skin-sam tr.yui3-datatable-odd.yui3-datatable-row-selected td {
+	background-color: #68e;
+	color: #fff;
+	outline: 0;
+}
