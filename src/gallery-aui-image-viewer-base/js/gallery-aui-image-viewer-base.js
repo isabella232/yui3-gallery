@@ -13,10 +13,13 @@ var L = A.Lang,
 
 	NodeFx = A.Plugin.NodeFX,
 
+	DOC = A.config.doc,
+
 	ANIM = 'anim',
 	ARROW = 'arrow',
 	ARROW_LEFT_EL = 'arrowLeftEl',
 	ARROW_RIGHT_EL = 'arrowRightEl',
+	AUTO = 'auto',
 	BD = 'bd',
 	BLANK = 'blank',
 	BODY = 'body',
@@ -82,10 +85,6 @@ var L = A.Lang,
 		return Array.prototype.slice.call(arguments).join(SPACE);
 	},
 
-	KEY_ESC = 27,
-	KEY_RIGHT = 39,
-	KEY_LEFT = 37,
-
 	getCN = A.ClassNameManager.getClassName,
 
 	CSS_HELPER_SCROLL_LOCK = getCN(HELPER, SCROLL, LOCK),
@@ -102,7 +101,16 @@ var L = A.Lang,
 	CSS_IMAGE_VIEWER_LOADING = getCN(IMAGE_VIEWER, LOADING),
 	CSS_OVERLAY_HIDDEN = getCN(OVERLAY, HIDDEN),
 
-	NODE_BLANK_TEXT = document.createTextNode(''),
+	KEY_ESC = 'ESC',
+	KEY_RIGHT = 'RIGHT',
+	KEY_LEFT = 'LEFT',
+
+	MAP_RESET_DIMENSIONS = {
+		height: AUTO,
+		width: AUTO
+	},
+
+	NODE_BLANK_TEXT = DOC.createTextNode(''),
 
 	INFO_LABEL_TEMPLATE = 'Image {current} of {total}',
 
@@ -264,7 +272,7 @@ var ImageViewer = A.Component.create(
 								opacity: 1
 							},
 							easing: EASE_BOTH_STRONG,
-							duration: .8
+							duration: 0.8
 						},
 						value
 					);
@@ -331,7 +339,7 @@ var ImageViewer = A.Component.create(
 			 */
 			modal: {
 				value: {
-					opacity: .8,
+					opacity: 0.8,
 					background: '#000'
 				}
 			},
@@ -496,7 +504,7 @@ var ImageViewer = A.Component.create(
 			loader: {
 				readOnly: true,
 				valueFn: function() {
-					return A.Node.create(TPL_LOADER).appendTo(document.body);
+					return A.Node.create(TPL_LOADER).appendTo(DOC.body);
 				}
 			},
 
@@ -541,15 +549,6 @@ var ImageViewer = A.Component.create(
 		EXTENDS: A.OverlayBase,
 
 		prototype: {
-			/**
-			 * The index of the active image.
-			 *
-			 * @property activeImage
-			 * @type Number
-			 * @protected
-			 */
-			activeImage: 0,
-
 			/**
 			 * Handler for the key events.
 			 *
@@ -700,31 +699,54 @@ var ImageViewer = A.Component.create(
 			 */
 			loadImage: function(src) {
 				var instance = this;
+
 				var bodyNode = instance.bodyNode;
 				var loader = instance.get(LOADER);
 
 				instance.set(LOADING, true);
 
-				// the user could navigate to the next/prev image before the current image onLoad trigger
-				// detach load event from the activeImage before create the new image placeholder
-				if (instance.activeImage) {
-					instance.activeImage.detach('load');
+				var activeImagePool = instance._activeImagePool;
+
+				if (!activeImagePool) {
+					activeImagePool = [];
+
+					// creating the placeholder image
+					var placeholder = instance.get(IMAGE);
+
+					var image0 = placeholder.clone();
+					var image1 = placeholder.clone();
+
+					// bind the onLoad handler to the image, this handler should append the loaded image
+					var onload = A.bind(instance._onLoadImage, instance);
+
+					image0.on('load', onload);
+					image1.on('load', onload);
+
+					activeImagePool.push(image0, image1);
+
+					instance._activeImagePool = activeImagePool;
 				}
 
-				// creating the placeholder image
-				instance.activeImage = instance.get(IMAGE).clone();
+				var image = activeImagePool[0];
 
-				var image = instance.activeImage;
+				image.removeAttribute('height');
+				image.removeAttribute('width');
+
+				image.setStyles(MAP_RESET_DIMENSIONS);
 
 				// append the placeholder image to the loader div
-				loader.empty();
 				loader.append(image);
 
-				// bind the onLoad handler to the image, this handler should append the loaded image
-				// to the overlay and take care of all animations
-				image.on('load', A.bind(instance._onLoadImage, instance));
+				// re-sort the pool
+				activeImagePool.push(activeImagePool.shift(image));
 
-				// set the src of the image to be loaded on the placeholder image
+				// set the src of the image to be loaded on the placeholder image.
+				// dataURI allows cached images to refire load event in webkit, and bypass
+				// the MimeType error (c/o Paul Irish & Doug Jones)
+				if (A.UA.webkit) {
+					image.attr(SRC, 'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///ywAAAAAAQABAAACAUwAOw==');
+				}
+
 				image.attr(SRC, src);
 
 				instance.fire('request', { image: image });
@@ -838,7 +860,7 @@ var ImageViewer = A.Component.create(
 				if (link) {
 					var src = link.attr(HREF);
 
-					instance.get(IMAGE).clone().attr(SRC, src);
+					instance._createPreloadImage(src);
 				}
 			},
 
@@ -916,6 +938,55 @@ var ImageViewer = A.Component.create(
 			},
 
 			/**
+			 * Removes the references to the preload images to free up memory
+			 *
+			 * @method _clearPreloadImageFn
+			 * @protected
+			 */
+			_clearPreloadImageFn: function() {
+				var instance = this;
+
+				var preloadImagePool = instance._preloadImagePool;
+				var image;
+
+				for (var i in preloadImagePool) {
+					image = preloadImagePool[i];
+
+					if (image && image.complete) {
+						preloadImagePool[i] = null;
+					}
+				}
+			},
+
+			/**
+			 * Creates the preload image instance, and add's it 
+			 * to the internal pool.
+			 *
+			 * @method _createPreloadImage
+			 * @protected
+			 */
+			_createPreloadImage: function(src) {
+				var instance = this;
+
+				var preloadImagePool = instance._preloadImagePool;
+
+				if (!preloadImagePool) {
+					preloadImagePool = instance._preloadImagePool = {};
+
+					instance._clearPreloadImageTask = A.debounce(instance._clearPreloadImageFn, 50, instance);
+				}
+
+				if (!(src in preloadImagePool)) {
+					var image = new Image();
+
+					image.onload = instance._clearPreloadImageTask;
+					image.src = src;
+
+					preloadImagePool[src] = image;
+				}
+			},
+
+			/**
 			 * Render the controls UI.
 			 *
 			 * @method _renderControls
@@ -946,7 +1017,9 @@ var ImageViewer = A.Component.create(
 			 */
 			_renderFooter: function() {
 				var instance = this;
+
 				var boundingBox = instance.get(BOUNDING_BOX);
+
 				var docFrag = boundingBox.get(OWNER_DOCUMENT).invoke(CREATE_DOCUMENT_FRAGMENT);
 
 				docFrag.append(
@@ -1096,10 +1169,42 @@ var ImageViewer = A.Component.create(
 				var total = instance.get(TOTAL_LINKS);
 				var current = instance.get(CURRENT_INDEX) + 1;
 
-				return A.substitute(v, {
+				return L.sub(v, {
 					current: current,
 					total: total
 				});
+			},
+
+			/**
+			 * Display the image once it's been loaded.
+			 *
+			 * @method _displayLoadedImage
+			 * @param {Node} image The loaded image
+			 * @protected
+			 */
+			_displayLoadedImage: function(image) {
+				var instance = this;
+
+				instance.setStdModContent(BODY, image);
+
+				instance._uiSetImageSize(image);
+
+				instance._syncImageViewerUI();
+
+				// invoke WidgetPosition _setAlignCenter to force center alignment
+				instance._setAlignCenter(true);
+
+				instance.set(LOADING, false);
+
+				instance.fire('load', { image: image });
+
+				if (instance.get(PRELOAD_NEIGHBOR_IMAGES)) {
+					// preload neighbor images
+					var currentIndex = instance.get(CURRENT_INDEX);
+
+					instance.preloadImage(currentIndex + 1);
+					instance.preloadImage(currentIndex - 1);
+				}
 			},
 
 			/**
@@ -1168,7 +1273,7 @@ var ImageViewer = A.Component.create(
 
 				instance.close();
 
-				event.halt()
+				event.halt();
 			},
 
 			/**
@@ -1183,7 +1288,7 @@ var ImageViewer = A.Component.create(
 
 				instance.prev();
 
-				event.halt()
+				event.halt();
 			},
 
 			/**
@@ -1198,7 +1303,7 @@ var ImageViewer = A.Component.create(
 
 				instance.next();
 
-				event.halt()
+				event.halt();
 			},
 
 			/**
@@ -1232,19 +1337,18 @@ var ImageViewer = A.Component.create(
 			 */
 			_onKeyInteraction: function(event) {
 				var instance = this;
-				var keyCode = event.keyCode;
 
 				if (!instance.get(VISIBLE)) {
 					return false; // NOTE: return
 				}
 
-				if (keyCode == KEY_LEFT) {
+				if (event.isKey(KEY_LEFT)) {
 					instance.prev();
 				}
-				else if (keyCode == KEY_RIGHT) {
+				else if (event.isKey(KEY_RIGHT)) {
 					instance.next();
 				}
-				else if (keyCode == KEY_ESC) {
+				else if (event.isKey(KEY_ESC)) {
 					instance.close();
 				}
 			},
@@ -1270,31 +1374,15 @@ var ImageViewer = A.Component.create(
 
 					image.fx.on('end', function(info) {
 						instance.fire('anim', { anim: info, image: image });
+
+						instance._displayLoadedImage(image);
 					});
 
 					image.fx.setAttrs(imageAnim);
 					image.fx.stop().run();
 				}
-
-				instance.setStdModContent(BODY, image);
-
-				instance._uiSetImageSize(image);
-
-				instance._syncImageViewerUI();
-
-				// invoke WidgetPosition _setAlignCenter to force center alignment
-				instance._setAlignCenter(true);
-
-				instance.set(LOADING, false);
-
-				instance.fire('load', { image: image });
-
-				if (instance.get(PRELOAD_NEIGHBOR_IMAGES)) {
-					// preload neighbor images
-					var currentIndex = instance.get(CURRENT_INDEX);
-
-					instance.preloadImage(currentIndex + 1);
-					instance.preloadImage(currentIndex - 1);
+				else {
+					instance._displayLoadedImage(image);
 				}
 			},
 
