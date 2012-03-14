@@ -47,6 +47,13 @@
 	display: none;
 }
 
+.yui3-basecelleditor-hidden,
+.yui3-datecelleditor-hidden,
+.yui3-dropdowncelleditor-hidden,
+.yui3-textcelleditor-hidden,
+.yui3-textareacelleditor-hidden,
+.yui3-checkboxcelleditor-hidden,
+.yui3-radiocelleditor-hidden,
 .yui3-helper-hidden {
 	display: none !important;
 }
@@ -62,8 +69,23 @@
 .yui3-tooltip-hidden,
 .yui3-image-viewer-hidden,
 .yui3-image-gallery-hidden {
-	clip: rect(0 0 0 0);
-	position: absolute;
+	clip: rect(0 0 0 0) !important;
+	position: absolute !important;
+
+	/*Webkit and IE7 let clipped content change the scroll height of the page*/
+	/*Scale webkit to 0*/
+	-webkit-transform: scale(0);
+	-webkit-transform-origin: 0 0;
+	/*Change IE7 to using fixed*/
+	*position: fixed !important;
+	/*...And reset back to absolute for IE6*/
+	_position: absolute !important;
+}
+
+.yui3-helper-force-offset {
+	display: block !important;
+	position: absolute !important;
+	visibility: hidden !important;
 }
 
 .yui3-helper-reset {
