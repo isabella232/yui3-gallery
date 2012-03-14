@@ -14,10 +14,8 @@ var Lang = A.Lang,
 
 	NAME = 'component',
 
-	CSS_COMPONENT = getClassName(NAME),
-
 	CSS_HELPER_HIDDEN = getClassName('helper', 'hidden'),
-	CONSTRUCTOR_OBJECT = Object.prototype.constructor;
+	CONSTRUCTOR_OBJECT = A.config.win.Object.prototype.constructor;
 
 /**
  * A base class for Component, providing:
@@ -142,7 +140,6 @@ A.extend(
 			instance._setComponentClassNames();
 
 			instance.after('cssClassChange', instance._afterCssClassChange);
-			instance.after('visibleChange', instance._afterComponentVisibleChange);
 		},
 
 		/**
@@ -169,36 +166,33 @@ A.extend(
 	     * <a href="Widget.html#config_visible">visible</a> attribute.
 		 *
 		 * @method toggle
+		 * @param visible Force the visibility of the component to this state.
 		 */
-		toggle: function() {
+		toggle: function(visible) {
 			var instance = this;
 
-			return instance.set('visible', !instance.get('visible'));
+			if (!Lang.isBoolean(visible)) {
+				visible = !instance.get('visible');
+			}
+
+			return instance.set('visible', visible);
 		},
 
-		/**
-		 * Fires after the value of the
-		 * <a href="Component.html#config_visible">visible</a> attribute change.
-		 *
-		 * @method _afterComponentVisibleChange
-		 * @param {EventFacade} event
-		 * @protected
-		 */
-		_afterComponentVisibleChange: function(event) {
+		_uiSetVisible: function(value) {
 			var instance = this;
+
+			var superUISetVisible = Component.superclass._uiSetVisible;
+
+			if (superUISetVisible) {
+				superUISetVisible.apply(instance, arguments);
+			}
 
 			var hideClass = instance.get('hideClass');
 
 			if (hideClass !== false) {
 				var boundingBox = instance.get('boundingBox');
 
-				var action = 'addClass';
-
-				if (event.newVal) {
-					action = 'removeClass';
-				}
-
-				boundingBox[action](hideClass || CSS_HELPER_HIDDEN);
+				boundingBox.toggleClass(hideClass || CSS_HELPER_HIDDEN, !value);
 			}
 		},
 
@@ -250,7 +244,7 @@ A.extend(
 			var buffer = [];
 
 			for (var i = classes.length - 4; i >= 0; i--) {
-				name = classes[i].NAME.toLowerCase();
+				name = String(classes[i].NAME).toLowerCase();
 
 				buffer.push(getClassName(name, 'content'));
 			}
@@ -288,9 +282,9 @@ A.extend(
 
 					var interactionNode = A.one(selector);
 
-					 for (var i = eventType.length - 1; i >= 0; i--) {
+					for (var i = eventType.length - 1; i >= 0; i--) {
 						renderHandles[i] = interactionNode.once(eventType[i], renderInteraction);
-					 }
+					}
 
 					delete config.render;
 				}
@@ -330,6 +324,14 @@ var COMP_PROTO = Component.prototype;
 
 var DEFAULT_UI_ATTRS = A.Widget.prototype._UI_ATTRS;
 
+Component._applyCssPrefix = function(component) {
+	if (component && component.NAME && !('CSS_PREFIX' in component)) {
+		component.CSS_PREFIX = A.ClassNameManager.getClassName(String(component.NAME).toLowerCase());
+	}
+
+	return component;
+};
+
 Component.create = function(config) {
 	config = config || {};
 
@@ -337,7 +339,7 @@ Component.create = function(config) {
 
 	var component = config.constructor;
 
-	if (!component || component == CONSTRUCTOR_OBJECT){
+	if (!A.Object.owns(config, 'constructor')){
 		component = function(){
 			component.superclass.constructor.apply(this, arguments);
 		};
@@ -387,6 +389,20 @@ Component.create = function(config) {
 	if (augmentsClasses) {
 		component = A.Base.build(config.NAME, component, augmentsClasses, { dynamic: false });
 	}
+
+	Component._applyCssPrefix(component);
+
+	return component;
+};
+
+Component.CSS_PREFIX = getClassName('component');
+
+var Base = A.Base;
+
+Component.build = function() {
+	var component = Base.build.apply(Base, arguments);
+
+	Component._applyCssPrefix(component);
 
 	return component;
 };
