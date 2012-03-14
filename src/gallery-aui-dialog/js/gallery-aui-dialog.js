@@ -6,26 +6,34 @@
  * @module aui-dialog
  */
 
-var L = A.Lang,
-	isBoolean = L.isBoolean,
-	isArray = L.isArray,
-	isObject = L.isObject,
+var Lang = A.Lang,
+	AObject = A.Object,
+	isBoolean = Lang.isBoolean,
+	isArray = Lang.isArray,
+	isObject = Lang.isObject,
+
+	WidgetStdMod = A.WidgetStdMod,
+
+	toNumber = function(val) {
+		return parseInt(val, 10) || 0;
+	},
+
+	DOC = A.config.doc,
 
 	BLANK = '',
-	BODY_CONTENT = 'bodyContent',
 	BOUNDING_BOX = 'boundingBox',
 	BUTTON = 'button',
 	BUTTONS = 'buttons',
 	CLOSE = 'close',
 	CLOSETHICK = 'closethick',
 	CONSTRAIN_TO_VIEWPORT = 'constrain2view',
-	CONTAINER = 'container',
 	DD = 'dd',
 	DEFAULT = 'default',
 	DESTROY_ON_CLOSE = 'destroyOnClose',
 	DIALOG = 'dialog',
 	DOT = '.',
 	DRAGGABLE = 'draggable',
+	DRAG_CONFIG = 'dragConfig',
 	DRAG_INSTANCE = 'dragInstance',
 	FOOTER_CONTENT = 'footerContent',
 	HD = 'hd',
@@ -37,8 +45,11 @@ var L = A.Lang,
 	MODAL = 'modal',
 	PROXY = 'proxy',
 	RESIZABLE = 'resizable',
+	RESIZABLE_CONFIG = 'resizableConfig',
 	RESIZABLE_INSTANCE = 'resizableInstance',
 	STACK = 'stack',
+	USE_ARIA = 'useARIA',
+	VIEWPORT_REGION = 'viewportRegion',
 	WIDTH = 'width',
 
 	EV_RESIZE = 'resize:resize',
@@ -47,17 +58,11 @@ var L = A.Lang,
 	getCN = A.ClassNameManager.getClassName,
 
 	CSS_DIALOG = getCN(DIALOG),
-	CSS_DIALOG_BUTTON = getCN(DIALOG, BUTTON),
-	CSS_DIALOG_BUTTON_CONTAINER = getCN(DIALOG, BUTTON, CONTAINER),
-	CSS_DIALOG_BUTTON_DEFAULT = getCN(DIALOG, BUTTON, DEFAULT),
 	CSS_DIALOG_HD = getCN(DIALOG, HD),
 	CSS_ICON_LOADING = getCN(ICON, LOADING),
 	CSS_PREFIX = getCN(DD),
 
-	NODE_BLANK_TEXT = document.createTextNode(''),
-
-	TPL_BUTTON = '<button class="' + CSS_DIALOG_BUTTON + '"></button>',
-	TPL_BUTTON_CONTAINER = '<div class="' + CSS_DIALOG_BUTTON_CONTAINER + '"></div>';
+	NODE_BLANK_TEXT = DOC.createTextNode('');
 
 /**
  * <p><img src="assets/images/aui-dialog/main.png"/></p>
@@ -184,6 +189,7 @@ A.mix(
 	         * @type Object
 	         */
 			constrain2view: {
+				setter: '_setConstrain2view',
 				value: false,
 				validator: isBoolean
 			},
@@ -210,11 +216,31 @@ A.mix(
 			 * @type boolean
 			 */
 			draggable: {
-				lazyAdd: true,
-				value: true,
-				setter: function(v) {
-					return this._setDraggable(v);
-				}
+				value: true
+			},
+
+			/**
+			 * Drag configuration.
+			 *
+			 * @attribute dragConfig
+			 * @type {}
+			 */
+			dragConfig: {
+				setter: function(val) {
+					var instance = this;
+
+					return A.merge(
+						{
+							bubbleTargets: instance,
+							node: instance.get(BOUNDING_BOX),
+							handles: [ DOT + CSS_DIALOG_HD ]
+						},
+						val || {}
+					);
+				},
+				writeOnce: true,
+				value: {},
+				validator: isObject
 			},
 
 			/**
@@ -226,6 +252,7 @@ A.mix(
 			 * @type A.DD.Drag
 			 */
 			dragInstance: {
+				setter: '_setDragInstance',
 				value: null
 			},
 
@@ -240,12 +267,54 @@ A.mix(
 			 * @type boolean
 			 */
 			modal: {
-				setter: function(v) {
-					return this._setModal(v);
-				},
 				lazyAdd: false,
-				value: false,
-				validator: isBoolean
+				validator: isBoolean,
+				value: false
+			},
+
+			/**
+			 * Resize configuration.
+			 *
+			 * @attribute resizableConfig
+			 * @type {}
+			 */
+			resizableConfig: {
+				setter: function(val) {
+					var instance = this;
+
+					return A.merge(
+						{
+							bubbleTargets: instance,
+							handles: 'r,br,b',
+							minHeight: 100,
+							minWidth: 200,
+							constrain2view: true,
+							node: instance.get(BOUNDING_BOX),
+							proxy: true,
+							after: {
+								end: A.bind(instance._syncResizableDimentions, instance),
+								resize: A.bind(instance._syncResizableDimentions, instance)
+							}
+						},
+						val || {}
+					);
+				},
+				writeOnce: true,
+				value: {},
+				validator: isObject
+			},
+
+			/**
+			 * Stores the Resize instance for the <code>A.Resize</code> used by
+             * this Dialog.
+			 *
+			 * @attribute resizableInstance
+			 * @default null
+			 * @type A.DD.Drag
+			 */
+			resizableInstance: {
+				setter: '_setResizableInstance',
+				value: null
 			},
 
 			/**
@@ -256,22 +325,7 @@ A.mix(
 			 * @type boolean
 			 */
 			resizable: {
-				setter: function(v) {
-					return this._setResizable(v);
-				},
 				value: true
-			},
-
-			/**
-			 * Stores the Drag instance for the
-             * <a href="Resize.html">Resize</a> used by this Dialog.
-			 *
-			 * @attribute resizableInstance
-			 * @default null
-			 * @type Resize
-			 */
-			resizableInstance: {
-				value: null
 			},
 
 			/**
@@ -282,12 +336,23 @@ A.mix(
 			 * @type boolean
 			 */
 			stack: {
-				lazyAdd: true,
 				value: true,
 				setter: function(v) {
 					return this._setStack(v);
 				},
 				validator: isBoolean
+			},
+
+			/**
+			 * @attribute strings
+			 * @description Collection of strings used to label elements of the Dialog's UI.
+			 * @default null
+			 * @type Object
+			 */
+			strings: {
+				value: {
+					close: 'Close dialog'
+				}
 			}
 		}
 	}
@@ -317,7 +382,8 @@ Dialog.prototype = {
 				handler: {
 					fn: instance.close,
 					context: instance
-				}
+				},
+				title: instance.get('strings').close
 			};
 
 			if (icons) {
@@ -327,7 +393,21 @@ Dialog.prototype = {
 			instance.set(ICONS, icons);
 		}
 
+		instance.publish(
+			'close',
+			{
+				defaultFn: instance._close
+			}
+		);
+
+		instance.addTarget(A.DialogManager);
+
+		instance.after('constrain2viewChange', instance._afterConstrain2viewChange);
+		instance.after('draggableChange', instance._afterDraggableChange);
+		instance.after('dragInstanceChange', instance._afterDragInstanceChange);
 		instance.after('render', instance._afterRenderer);
+		instance.after('resizableChange', instance._afterResizableChange);
+		instance.after('resizableInstanceChange', instance._afterResizableInstanceChange);
 	},
 
 	/**
@@ -340,10 +420,30 @@ Dialog.prototype = {
 		var instance = this;
 
 		instance._bindLazyComponents();
+	},
 
-		instance.publish('close', { defaultFn: instance._close });
+	/**
+     * Refreshes the rendered UI, based on Widget State
+     *
+     * @method syncUI
+     * @protected
+     *
+     */
+	syncUI: function() {
+		var instance = this;
 
-		instance.on('visibleChange', instance._afterSetVisible);
+		if (instance.get(USE_ARIA)) {
+			instance.plug(A.Plugin.Aria, {
+				attributes: {
+					visible: {
+						ariaName: 'hidden',
+						format: function(value) {
+							return !value;
+						}
+					}
+				}
+			});
+		}
 	},
 
 	/**
@@ -359,6 +459,20 @@ Dialog.prototype = {
 
 		A.Event.purgeElement(boundingBox, true);
 		A.DialogManager.remove(instance);
+	},
+
+    /**
+     * Aligns the Dialog to the viewport.
+     *
+     * @method alignToViewport
+     * @param int offsetLeft An offset number to be added to the left coordinate value.
+     * @param int offsetTop An offset number to be added to the top coordinate value.
+     */
+	alignToViewport: function(offsetLeft, offsetTop) {
+		var instance = this;
+		var viewportRegion = A.getDoc().get(VIEWPORT_REGION);
+
+		instance.move([ viewportRegion.left + toNumber(offsetLeft), viewportRegion.top + toNumber(offsetTop) ]);
 	},
 
 	/**
@@ -386,20 +500,6 @@ Dialog.prototype = {
 		var instance = this;
 
 		instance.fire('close');
-	},
-
-	/**
-	 * Fires after the value of the
-	 * <a href="Dialog.html#config_constrain2view">constrain2view</a> attribute change.
-	 *
-	 * @method 
-	 * @param {EventFacade} event
-	 * @protected
-	 */
-	_afterConstrain2viewChange: function(event) {
-		var instance = this;
-
-		instance._setConstrain2view(event.newVal);
 	},
 
 	/**
@@ -436,10 +536,6 @@ Dialog.prototype = {
 		else {
 			instance.hide();
 		}
-
-		if (instance.get(MODAL)) {
-			A.DialogMask.hide();
-		}
 	},
 
 	/**
@@ -452,30 +548,21 @@ Dialog.prototype = {
 		var instance = this;
 
 		var buttons = instance.get(BUTTONS);
-		var container = A.Node.create(TPL_BUTTON_CONTAINER);
-		var nodeModel = A.Node.create(TPL_BUTTON);
-
-		A.each(
-			buttons,
-			function(button, i) {
-				var node = nodeModel.clone();
-
-				if (button.isDefault) {
-					node.addClass(CSS_DIALOG_BUTTON_DEFAULT);
-				}
-
-				if (button.handler) {
-					node.on('click', button.handler, instance);
-				}
-
-				node.html(button.text || BLANK);
-
-				container.append(node);
-			}
-		);
 
 		if (buttons.length) {
-			instance.set(FOOTER_CONTENT, container);
+			var footerButtons = new A.Toolbar(
+				{
+					children: buttons
+				}
+			);
+
+			footerButtons._DEFAULT_CONTEXT = instance;
+
+			footerButtons.render(instance.footerNode);
+
+			instance.fire('contentUpdate');
+
+			instance.buttons = footerButtons;
 		}
 	},
 
@@ -489,182 +576,73 @@ Dialog.prototype = {
 		var instance = this;
 
 		// forcing lazyAdd:true attrs call the setter
-		if (!instance.get(DRAG_INSTANCE) && instance.get(DRAGGABLE)) {
-			instance.get(DRAGGABLE);
-		}
-
-		if (!instance.get(RESIZABLE_INSTANCE) && instance.get(RESIZABLE)) {
-			instance.get(RESIZABLE);
-		}
+		instance.get(DRAG_INSTANCE);
+		instance.get(RESIZABLE_INSTANCE);
 	},
 
 	/**
-	 * Setter for the <a href="Dialog.html#config_constrain2view">constrain2view</a>
-     * attributte. Plugs or unplugs the DDConstrained plugin on the drag instance.
-	 *
-	 * @method _setConstrain2view
-	 * @param {Object} value Object to be passed to the A.DD.Drag constructor.
+	 * Set default ARIA roles and attributes.
+	 * @method _setDefaultARIAValues
 	 * @protected
-	 * @return {Object}
 	 */
-	_setConstrain2view: function(value) {
+	_setDefaultARIAValues: function() {
 		var instance = this;
 
-		var dragInstance = instance.get(DRAG_INSTANCE);
+		if (!instance.get(USE_ARIA)) {
+			return;
+		}
 
-		if (dragInstance) {
-			if (value) {
-				dragInstance.plug(
-					A.Plugin.DDConstrained,
-					{
-						constrain2view: instance.get(CONSTRAIN_TO_VIEWPORT)
-					}
-				);
-			}
-			else {
-				dragInstance.unplug(A.Plugin.DDConstrained);
+		instance.aria.setRole('dialog', instance.get(BOUNDING_BOX));
+
+		if (instance.icons) {
+			var closeThick = instance.icons.item(CLOSETHICK);
+
+			if (closeThick){
+				instance.aria.setAttribute('controls', instance.get('id'), closeThick.get(BOUNDING_BOX));
 			}
 		}
 	},
 
 	/**
-	 * Setter for the <a href="Dialog.html#config_draggable">draggable</a>
-     * attributte. Initialize the A.DD.Drag on the Dialog.
+	 * Setter for the <a href="Dialog.html#config_draggable">draggable</a> attribute.
 	 *
-	 * @method _setDraggable
-	 * @param {Object} value Object to be passed to the A.DD.Drag constructor.
-	 * @protected
-	 * @return {Object}
-	 */
-	_setDraggable: function(value) {
-		var instance = this;
-		var boundingBox = instance.get(BOUNDING_BOX);
-
-		var destroy = function() {
-			var dragInstance = instance.get(DRAG_INSTANCE);
-
-			if (dragInstance) {
-				// TODO - YUI3 has a bug when destroy and recreates
-				dragInstance.destroy();
-				dragInstance.unplug(A.Plugin.DDConstrained);
-			}
-		};
-
-		A.DD.DDM.CSS_PREFIX = CSS_PREFIX;
-
-		if (value) {
-			var defaults = {
-				node: boundingBox,
-				handles: [ DOT + CSS_DIALOG_HD ]
-			};
-
-			var dragOptions = A.merge(defaults, value || {});
-
-			// change the drag scope callback to execute using the dialog scope
-			if (dragOptions.on) {
-				A.each(
-					dragOptions.on,
-					function(fn, eventName) {
-						dragOptions.on[eventName] = A.bind(fn, instance);
-					}
-				);
-			}
-
-			destroy();
-
-			var dragInstance = new A.DD.Drag(dragOptions);
-
-			instance.set(DRAG_INSTANCE, dragInstance);
-
-			instance.after('constrain2viewChange', instance._afterConstrain2viewChange, instance);
-
-			instance._setConstrain2view(instance.get('constrain2view'));
-		}
-		else {
-			destroy();
-		}
-
-		return value;
-	},
-
-	/**
-	 * Setter for the <a href="Dialog.html#config_modal">modal</a> attribute.
-	 *
-	 * @method _setModal
+	 * @method _setDragInstance
 	 * @param {boolean} value
 	 * @protected
 	 * @return {boolean}
 	 */
-	_setModal: function(value) {
+	_setDragInstance: function(val) {
 		var instance = this;
 
-		if (value) {
-			A.DialogMask.show();
-		}
-		else {
-			A.DialogMask.hide();
-		}
-
-		return value;
-	},
-
-	/**
-	 * Setter for the <a href="Dialog.html#config_resizable">resizable</a>
-     * attribute.
-	 *
-	 * @method _setResizable
-	 * @param {boolean} value
-	 * @protected
-	 * @return {boolean}
-	 */
-	_setResizable: function(value) {
-		var instance = this;
-		var resizableInstance = instance.get(RESIZABLE_INSTANCE);
-
-		var destroy = function() {
-			if (resizableInstance) {
-				resizableInstance.destroy();
-			}
-		};
-
-		if (value) {
-			var setDimensions = function(event) {
-				var type = event.type;
-				var info = event.info;
-
-				if ((type == EV_RESIZE_END) ||
-					((type == EV_RESIZE) && !event.currentTarget.get(PROXY))) {
-						instance.set(HEIGHT, info.offsetHeight);
-						instance.set(WIDTH, info.offsetWidth);
-				}
-			};
-
-			destroy();
-
-			var resize = new A.Resize(
-				A.merge(
-					{
-						handles: 'r,br,b',
-						minHeight: 100,
-						minWidth: 200,
-						constrain2view: true,
-						node: instance.get(BOUNDING_BOX),
-						proxy: true
-					},
-					value || {}
-				)
+		if (instance.get(DRAGGABLE)) {
+			val = new A.DD.Drag(
+				instance.get(DRAG_CONFIG)
 			);
 
-			resize.after('end', setDimensions);
-			resize.after('resize', setDimensions);
-
-			instance.set(RESIZABLE_INSTANCE, resize);
-
-			return value;
+			instance._updateDDConstrain2view(val);
 		}
-		else {
-			destroy();
+
+		return val;
+	},
+
+	/**
+	 * Setter for the <a href="Dialog.html#config_resizable">resizable</a> attribute.
+	 *
+	 * @method _setResizableInstance
+	 * @param {boolean} value
+	 * @protected
+	 * @return {boolean}
+	 */
+	_setResizableInstance: function(val) {
+		var instance = this;
+
+		if (instance.get(RESIZABLE)) {
+			val = new A.Resize(
+				instance.get(RESIZABLE_CONFIG)
+			);
 		}
+
+		return val;
 	},
 
 	/**
@@ -690,28 +668,133 @@ Dialog.prototype = {
 	},
 
 	/**
-	 * Fires after the value of the
-     * <a href="Overlay.html#config_visible">visible</a> attribute change.
+	 * Sync dialog dimentions based on resizable end and resize events.
 	 *
-	 * @method _afterSetVisible
+	 * @method _syncResizableDimentions
+	 * @param {EventFacade} Resizable event
+	 * @protected
+	 */
+	_syncResizableDimentions: function(event) {
+		var instance = this;
+
+		var type = event.type;
+		var info = event.info;
+
+		if ((type === EV_RESIZE_END) ||
+			((type === EV_RESIZE) && !event.currentTarget.get(PROXY))) {
+				instance.set(HEIGHT, info.offsetHeight);
+				instance.set(WIDTH, info.offsetWidth);
+		}
+	},
+
+	/**
+	 * Plug and Unplug A.Plugin.DDConstrained to the dragInstance depending on
+	 * the value of constrain2view attribute.
+	 *
+	 * @param {A.DD.Drag} dragInstance
+	 * @protected
+	 */
+	_updateDDConstrain2view: function(dragInstance) {
+		var instance = this;
+		var constrain2view = instance.get(CONSTRAIN_TO_VIEWPORT);
+
+		if (constrain2view) {
+			dragInstance.plug(
+				A.Plugin.DDConstrained,
+				{
+					constrain2view: constrain2view
+				}
+			);
+		}
+		else {
+			dragInstance.unplug(A.Plugin.DDConstrained);
+		}
+	},
+
+	/**
+	 * Fires after the value of the
+     * <a href="Overlay.html#config_constrain2view">constrain2view</a> attribute change.
+	 *
+	 * @method _afterConstrain2viewChange
 	 * @param {EventFacade} event
 	 * @protected
 	 */
-	_afterSetVisible: function(event) {
+	_afterConstrain2viewChange: function(event) {
 		var instance = this;
 
-		if (instance.get(MODAL)) {
-			if (event.newVal) {
-				A.DialogMask.show();
-			}
-			else {
-				A.DialogMask.hide();
-			}
+		instance._updateDDConstrain2view(
+			instance.get(DRAG_INSTANCE)
+		);
+	},
+
+	/**
+	 * Fires after the value of the
+     * <a href="Overlay.html#config_draggable">draggable</a> attribute change.
+	 *
+	 * @method _afterDraggableChange
+	 * @param {EventFacade} event
+	 * @protected
+	 */
+	_afterDraggableChange: function(event) {
+		var instance = this;
+
+		instance.set(DRAG_INSTANCE, null);
+	},
+
+	/**
+	 * Fires after the value of the
+     * <a href="Overlay.html#config_dragInstance">dragInstance</a> attribute change.
+	 *
+	 * @method _afterDragInstanceChange
+	 * @param {EventFacade} event
+	 * @protected
+	 */
+	_afterDragInstanceChange: function(event) {
+		var instance = this;
+
+		if (event.prevVal) {
+			event.prevVal.destroy();
+		}
+	},
+
+	/**
+	 * Fires after the value of the
+	 * <a href="Overlay.html#config_resizable">resizable</a> attribute change.
+	 *
+	 * @method _afterResizableChange
+	 * @param {EventFacade} event
+	 * @protected
+	 */
+	_afterResizableChange: function(event) {
+		var instance = this;
+
+		instance.set(RESIZABLE_INSTANCE, null);
+	},
+
+	/**
+	 * Fires after the value of the
+	 * <a href="Overlay.html#config_resizableInstance">resizableInstance</a> attribute change.
+	 *
+	 * @method _afterResizableInstanceChange
+	 * @param {EventFacade} event
+	 * @protected
+	 */
+	_afterResizableInstanceChange: function(event) {
+		var instance = this;
+
+		if (event.prevVal) {
+			event.prevVal.destroy();
 		}
 	}
 };
 
-A.Dialog = A.Base.build(DIALOG, A.Panel, [Dialog, A.WidgetPosition, A.WidgetStack, A.WidgetPositionAlign, A.WidgetPositionConstrain]);
+A.Dialog = A.Component.create(
+	{
+		NAME: DIALOG,
+		EXTENDS: A.Panel,
+		AUGMENTS: [Dialog, A.WidgetPosition, A.WidgetStack, A.WidgetPositionAlign, A.WidgetPositionConstrain]
+	}
+);
 
 /**
  * A base class for DialogManager:
@@ -723,14 +806,43 @@ A.Dialog = A.Base.build(DIALOG, A.Panel, [Dialog, A.WidgetPosition, A.WidgetStac
  * @extends OverlayManager
  * @static
  */
-A.DialogManager = new A.OverlayManager(
+
+var DialogManager = new A.OverlayManager(
 	{
 		zIndexBase: 1000
 	}
 );
 
+var MODALS = {};
+
+DialogManager._MODALS = MODALS;
+
+DialogManager.after(
+	['dialog:destroy', 'dialog:modalChange', 'dialog:render', 'dialog:visibleChange'],
+	function(event) {
+		var dialog = event.target;
+
+		if (dialog) {
+			var id = dialog.get('id');
+
+			if (event.type !== 'dialog:destroy' && dialog.get('visible') && dialog.get('modal')) {
+				MODALS[id] = true;
+
+				A.DialogMask.show();
+			}
+			else {
+				delete MODALS[id];
+
+				if (AObject.isEmpty(MODALS)) {
+					A.DialogMask.hide();
+				}
+			}
+		}
+	}
+);
+
 A.mix(
-	A.DialogManager,
+	DialogManager,
 	{
 		/**
 		 * Find the <a href="Widget.html">Widget</a> instance based on a child
@@ -761,7 +873,7 @@ A.mix(
 		 * @return {Dialog}
 		 */
 		closeByChild: function(child) {
-			return A.DialogManager.findByChild(child).close();
+			return DialogManager.findByChild(child).close();
 		},
 
 		/**
@@ -778,7 +890,7 @@ A.mix(
 		 * @param {Node | String} child Child node of the Dialog.
 		 */
 		refreshByChild: function(child) {
-			var dialog = A.DialogManager.findByChild(child);
+			var dialog = DialogManager.findByChild(child);
 
 			if (dialog && dialog.io) {
 				dialog.io.start();
@@ -786,6 +898,8 @@ A.mix(
 		}
 	}
 );
+
+A.DialogManager = DialogManager;
 
 /**
  * A base class for DialogMask - Controls the <a
