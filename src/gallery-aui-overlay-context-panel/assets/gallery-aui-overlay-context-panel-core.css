@@ -33,21 +33,21 @@
 }
 
 .yui3-overlaycontextpanel-arrow-tr .yui3-overlaycontextpanel-pointer {
-	border-left: 18px dotted transparent;
+	border-left: 18px dashed transparent;
 	border-right: 0;
 	right: 10px;
 }
 
 .yui3-overlaycontextpanel-arrow-tc .yui3-overlaycontextpanel-pointer {
-	border-left: 10px dotted transparent;
-	border-right: 10px dotted transparent;
+	border-left: 10px dashed transparent;
+	border-right: 10px dashed transparent;
 	left: 50%;
 	margin-left: -10px;
 }
 
 .yui3-overlaycontextpanel-arrow-tl .yui3-overlaycontextpanel-pointer {
 	border-left: 0;
-	border-right: 18px dotted transparent;
+	border-right: 18px dashed transparent;
 	left: 10px;
 }
 
@@ -57,20 +57,20 @@
 }
 
 .yui3-overlaycontextpanel-arrow-tr .yui3-overlaycontextpanel-pointer-inner {
-	border-left: 12px dotted transparent;
+	border-left: 12px dashed transparent;
 	border-right: 0;
 	right: 2px;
 }
 
 .yui3-overlaycontextpanel-arrow-tc .yui3-overlaycontextpanel-pointer-inner {
-	border-left: 8px dotted transparent;
-	border-right: 8px dotted transparent;
+	border-left: 8px dashed transparent;
+	border-right: 8px dashed transparent;
 	left: -8px;
 }
 
 .yui3-overlaycontextpanel-arrow-tl .yui3-overlaycontextpanel-pointer-inner {
 	border-left: 0;
-	border-right: 12px dotted transparent;
+	border-right: 12px dashed transparent;
 	left: 2px;
 }
 
@@ -84,19 +84,19 @@
 
 .yui3-overlaycontextpanel-arrow-rb .yui3-overlaycontextpanel-pointer {
 	border-bottom: 0;
-	border-top: 18px dotted transparent;
+	border-top: 18px dashed transparent;
 	bottom: 10px;
 }
 
 .yui3-overlaycontextpanel-arrow-rc .yui3-overlaycontextpanel-pointer {
-	border-bottom: 10px dotted transparent;
-	border-top: 10px dotted transparent;
+	border-bottom: 10px dashed transparent;
+	border-top: 10px dashed transparent;
 	bottom: 50%;
 	margin-bottom: -10px;
 }
 
 .yui3-overlaycontextpanel-arrow-rt .yui3-overlaycontextpanel-pointer {
-	border-bottom: 18px dotted transparent;
+	border-bottom: 18px dashed transparent;
 	border-top: 0;
 	top: 10px;
 }
@@ -108,18 +108,18 @@
 
 .yui3-overlaycontextpanel-arrow-rb .yui3-overlaycontextpanel-pointer-inner {
 	border-bottom: 0;
-	border-top: 12px dotted transparent;
+	border-top: 12px dashed transparent;
 	bottom: 2px;
 }
 
 .yui3-overlaycontextpanel-arrow-rc .yui3-overlaycontextpanel-pointer-inner {
-	border-bottom: 8px dotted transparent;
-	border-top: 8px dotted transparent;
+	border-bottom: 8px dashed transparent;
+	border-top: 8px dashed transparent;
 	bottom: -8px;
 }
 
 .yui3-overlaycontextpanel-arrow-rt .yui3-overlaycontextpanel-pointer-inner {
-	border-bottom: 12px dotted transparent;
+	border-bottom: 12px dashed transparent;
 	border-top: 0;
 	top: 2px;
 }
@@ -133,21 +133,21 @@
 }
 
 .yui3-overlaycontextpanel-arrow-br .yui3-overlaycontextpanel-pointer {
-	border-left: 18px dotted transparent;
+	border-left: 18px dashed transparent;
 	border-right: 0;
 	right: 10px;
 }
 
 .yui3-overlaycontextpanel-arrow-bc .yui3-overlaycontextpanel-pointer {
-	border-left: 10px dotted transparent;
-	border-right: 10px dotted transparent;
+	border-left: 10px dashed transparent;
+	border-right: 10px dashed transparent;
 	left: 50%;
 	margin-left: -10px;
 }
 
 .yui3-overlaycontextpanel-arrow-bl .yui3-overlaycontextpanel-pointer {
 	border-left: 0;
-	border-right: 18px dotted transparent;
+	border-right: 18px dashed transparent;
 	left: 10px;
 }
 
@@ -157,20 +157,20 @@
 }
 
 .yui3-overlaycontextpanel-arrow-br .yui3-overlaycontextpanel-pointer-inner {
-	border-left: 12px dotted transparent;
+	border-left: 12px dashed transparent;
 	border-right: 0;
 	right: 2px;
 }
 
 .yui3-overlaycontextpanel-arrow-bc .yui3-overlaycontextpanel-pointer-inner {
-	border-left: 8px dotted transparent;
-	border-right: 8px dotted transparent;
+	border-left: 8px dashed transparent;
+	border-right: 8px dashed transparent;
 	left: -8px;
 }
 
 .yui3-overlaycontextpanel-arrow-bl .yui3-overlaycontextpanel-pointer-inner {
 	border-left: 0;
-	border-right: 12px dotted transparent;
+	border-right: 12px dashed transparent;
 	left: 2px;
 }
 
@@ -184,19 +184,19 @@
 
 .yui3-overlaycontextpanel-arrow-lb .yui3-overlaycontextpanel-pointer {
 	border-bottom: 0;
-	border-top: 18px dotted transparent;
+	border-top: 18px dashed transparent;
 	bottom: 10px;
 }
 
 .yui3-overlaycontextpanel-arrow-lc .yui3-overlaycontextpanel-pointer {
-	border-bottom: 10px dotted transparent;
-	border-top: 10px dotted transparent;
+	border-bottom: 10px dashed transparent;
+	border-top: 10px dashed transparent;
 	bottom: 50%;
 	margin-bottom: -10px;
 }
 
 .yui3-overlaycontextpanel-arrow-lt .yui3-overlaycontextpanel-pointer {
-	border-bottom: 18px dotted transparent;
+	border-bottom: 18px dashed transparent;
 	border-top: 0;
 	top: 10px;
 }
@@ -208,18 +208,18 @@
 
 .yui3-overlaycontextpanel-arrow-lb .yui3-overlaycontextpanel-pointer-inner {
 	border-bottom: 0;
-	border-top: 12px dotted transparent;
+	border-top: 12px dashed transparent;
 	bottom: 2px;
 }
 
 .yui3-overlaycontextpanel-arrow-lc .yui3-overlaycontextpanel-pointer-inner {
-	border-bottom: 8px dotted transparent;
-	border-top: 8px dotted transparent;
+	border-bottom: 8px dashed transparent;
+	border-top: 8px dashed transparent;
 	bottom: -8px;
 }
 
 .yui3-overlaycontextpanel-arrow-lt .yui3-overlaycontextpanel-pointer-inner {
-	border-bottom: 12px dotted transparent;
+	border-bottom: 12px dashed transparent;
 	border-top: 0;
 	top: 2px;
 }
