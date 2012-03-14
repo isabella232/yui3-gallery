@@ -283,21 +283,22 @@ var Toolbar = A.Component.create(
 );
 
 var ToolbarSpacer = A.Component.create(
-		{
-			NAME: TOOLBARSPACER,
+	{
+		NAME: TOOLBARSPACER,
 
-			ATTRS: {
-				
-			},
+		AUGMENTS: [A.WidgetChild],
 
-			prototype: {
-				BOUNDING_TEMPLATE: TPL_GENERIC,
-				CONTENT_TEMPLATE: null
-			}
+		ATTRS: {
+		},
+
+		prototype: {
+			BOUNDING_TEMPLATE: TPL_GENERIC,
+			CONTENT_TEMPLATE: null
 		}
-	);
+	}
+);
 
-A.ToolbarSpacer = A.Base.build(NAME, ToolbarSpacer, [A.WidgetChild], { dynamic: false });
+A.ToolbarSpacer = ToolbarSpacer;
 
 var WidgetParentId = function() {
 	var instance = this;
@@ -340,18 +341,6 @@ WidgetParentId.prototype = {
 		}
 	},
 
-	_getItemById: function(id) {
-		var instance = this;
-
-		var index = -1;
-
-		if (Lang.isString(id)) {
-			index = instance._CHILD_MAP[id];
-		}
-
-		return index;
-	},
-
 	_onAddChildById: function(event) {
 		var instance = this;
 
@@ -363,4 +352,4 @@ WidgetParentId.prototype = {
 	}
 };
 
-A.Toolbar = A.Base.build(NAME, Toolbar, [A.WidgetParent, WidgetParentId], { dynamic: false });
+A.Toolbar = A.Component.build(NAME, Toolbar, [A.WidgetParent, WidgetParentId], { dynamic: false });
