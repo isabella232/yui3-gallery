@@ -1,0 +1,132 @@
+.yui3-scheduler-view-day-hidden,
+.yui3-scheduler-view-week-hidden,
+.yui3-scheduler-view-year-hidden,
+.yui3-scheduler-view-month-hidden {
+	display: none;
+}
+
+.yui3-scheduler-view-table {
+	border: 0;
+	clear: both;
+	table-layout: fixed;
+	width: 100%;
+}
+
+.yui3-scheduler-view-table-col {
+	vertical-align: top;
+	border-left: 1px solid #ddd;
+	padding: 0;
+}
+
+.yui3-scheduler-view-table-col-shim {
+	height: 1250px;
+	margin-bottom: -1250px;
+	position: relative;
+}
+
+.yui3-scheduler-view-table-colblank {
+	width: 40px;
+}
+
+.yui3-scheduler-view-table-coltime {
+	background-color: #E3E9FF;
+	border-left: 0;
+	border-right: 1px solid #BBCCFF;
+	color: #AAADBC;
+	text-align: right;
+	width: 40px;
+	padding-right: 2px;
+}
+
+.yui3-scheduler-view-table-time {
+	height: 52px;
+}
+
+.yui3-scheduler-view-scrollable {
+	position: relative;
+	overflow: scroll;
+	overflow-y: scroll;
+	overflow-x: hidden;
+}
+
+.yui3-scheduler-view-noscroll {
+	position: relative;
+	overflow: hidden;
+	overflow-y: hidden;
+	overflow-x: hidden;
+}
+
+.yui3-scheduler-view-content {
+	position: relative;
+}
+
+.yui3-scheduler-view-colgrid {
+	background: #ddd;
+}
+
+.yui3-scheduler-view-colgrid td {
+	padding: 0 0 0 1px;
+}
+
+.yui3-scheduler-view-grid {
+	background: #fff;
+	position: relative;
+}
+
+.yui3-scheduler-view-day-header-table {
+	width: 100%;
+	table-layout: fixed;
+}
+
+.yui3-scheduler-view-markers {
+	position: absolute;
+	width: 100%;
+	z-index: 0;
+}
+
+.yui3-scheduler-view-markercell {
+	height: 52px;
+}
+
+.yui3-scheduler-view-marker-division {
+	height: 25px;
+	border-bottom: 1px dotted #DDDDDD;
+	border-top: 1px solid #DDDDDD;
+}
+
+.yui3-scheduler-view-day-content .yui3-widget-hd {
+	background-color: #E3E9FF;
+	border-bottom: 1px solid #BBCCFF;
+	color: #AAADBC;
+}
+
+.yui3-scheduler-view-day-content .yui3-widget-bd {
+	height: 600px;
+}
+
+.yui3-scheduler-view-day-header-day-first {
+	width: 40px;
+}
+
+.yui3-scheduler-view-day-header-day-pad-right {
+	width: 15px;
+}
+
+.yui3-scheduler-view-day-header-day a {
+	font-size: 11px;
+	font-weight: normal;
+	text-decoration: none;
+	display: block;
+}
+
+.yui3-scheduler-view-day-header-day a:hover {
+	text-decoration: underline;
+}
+
+.yui3-scheduler-view-day-header-day {
+	text-align: center;
+}
+
+.yui3-scheduler-view-day {
+	background: #fff;
+}
