@@ -13,17 +13,25 @@ var Lang = A.Lang,
 	isArray = Lang.isArray,
 	isBoolean = Lang.isBoolean,
 
+	WidgetStdMod = A.WidgetStdMod,
+
+	DOC = A.config.doc,
+
 	BOUNDING_BOX = 'boundingBox',
 	COLLAPSE = 'collapse',
 	COLLAPSED = 'collapsed',
 	COLLAPSIBLE = 'collapsible',
 	ICON = 'icon',
+	ID = 'id',
 	MINUS = 'minus',
 	PANEL = 'panel',
 	PLUS = 'plus',
 	TITLE = 'title',
 	ICONS = 'icons',
+	USE_ARIA = 'useARIA',
 	VISIBLE = 'visible',
+
+	EMPTY_STR = '',
 
 	getClassName = A.ClassNameManager.getClassName,
 
@@ -39,7 +47,7 @@ var Lang = A.Lang,
 		header: 'hd'
 	},
 
-	NODE_BLANK_TEXT = document.createTextNode(''),
+	NODE_BLANK_TEXT = DOC.createTextNode(''),
 
 	TPL_HEADER_TEXT = '<span class="' + CSS_PANEL_HD_TEXT + '"></span>';
 
@@ -85,6 +93,10 @@ var Panel = function() {};
  * @static
  */
 Panel.ATTRS = {
+	bodyContent: {
+		value: EMPTY_STR
+	},
+
 	/**
 	 * Whether the panel is displayed collapsed.
 	 *
@@ -107,6 +119,10 @@ Panel.ATTRS = {
 	collapsible: {
 		value: false,
 		validator: isBoolean
+	},
+
+	headerContent: {
+		value: EMPTY_STR
 	},
 
 	/**
@@ -141,6 +157,29 @@ Panel.ATTRS = {
 	icons: {
 		value: [],
 		validator: isArray
+	},
+
+	/**
+	 * @attribute strings
+	 * @description Collection of strings used to label elements of the Panel's UI.
+	 * @default null
+	 * @type Object
+	 */
+	strings: {
+		value: {
+			toggle: 'Toggle collapse'
+		}
+	},
+
+	/**
+	 * True if Panel should use ARIA plugin
+	 *
+	 * @attribute useARIA
+	 * @default true
+	 * @type Boolean
+	 */
+	useARIA: {
+		value: true
 	}
 };
 
@@ -154,17 +193,60 @@ Panel.prototype = {
 	initializer: function(config) {
 		var instance = this;
 
-		if (!config.bodyContent) {
-			instance.set('bodyContent', NODE_BLANK_TEXT);
-		}
-
-		if (!config.headerContent) {
-			instance.set('headerContent', NODE_BLANK_TEXT);
-		}
-
 		instance.after('collapsedChange', instance._afterCollapsedChange);
 		instance.after('render', instance._afterPanelRender);
 		instance.after('titleChange', instance._afterTitleChange);
+	},
+
+	/**
+     * Refreshes the rendered UI, based on Widget State
+     *
+     * @method syncUI
+     * @protected
+     *
+     */
+	syncUI: function() {
+		var instance = this;
+
+		if (instance.get(USE_ARIA)) {
+			instance.plug(A.Plugin.Aria, {
+				after: {
+					processAttribute: function(event) {
+						var instance = this;
+
+						var host = instance.get('host');
+
+						if (event.aria.attrName == COLLAPSED) {
+							var collapsed = host.get(COLLAPSED);
+
+							if (host.icons) {
+								var icons = host.icons;
+								var collapseItem = icons.item(COLLAPSE);
+
+								if (collapseItem) {
+									instance.setAttribute(
+										'pressed',
+										collapsed,
+										collapseItem.get(BOUNDING_BOX)
+									);
+								}
+							}
+
+							instance.setAttribute(
+								'hidden',
+								 collapsed,
+								 host.bodyNode
+							);
+
+							event.halt();
+						}
+					}
+				},
+				attributes: {
+					collapsed: 'hidden'
+				}
+			});
+		}
 	},
 
 	/**
@@ -271,7 +353,8 @@ Panel.prototype = {
 					handler: {
 						fn: instance.toggleCollapse,
 						context: instance
-					}
+					},
+					title: instance.get('strings').toggle
 				}
 			);
 		}
@@ -283,7 +366,11 @@ Panel.prototype = {
 		)
 		.render(instance.headerNode);
 
-		instance.icons.get(BOUNDING_BOX).addClass(CSS_PANEL_ICONS);
+		var toolbarBoundingBox = instance.icons.get(BOUNDING_BOX);
+
+		toolbarBoundingBox.addClass(CSS_PANEL_ICONS);
+
+		instance.setStdModContent(WidgetStdMod.HEADER, toolbarBoundingBox, WidgetStdMod.BEFORE);
 	},
 
 	/**
@@ -295,15 +382,6 @@ Panel.prototype = {
 	 */
 	_renderHeaderText: function() {
 		var instance = this;
-		var headerNode = instance.headerNode;
-		var headerTextNode = A.Node.create(TPL_HEADER_TEXT);
-		var html = headerNode.html();
-
-		headerNode.empty();
-
-		headerTextNode.addClass(CSS_PANEL_HD_TEXT);
-
-		headerNode.prepend(headerTextNode);
 
 		/**
 		 * Stores the created node for the header of the Panel.
@@ -312,11 +390,13 @@ Panel.prototype = {
 		 * @type Node
 		 * @protected
 		 */
-		instance.headerTextNode = headerTextNode;
+		instance.headerTextNode = A.Node.create(TPL_HEADER_TEXT).addClass(CSS_PANEL_HD_TEXT);
 
 		if (!instance.get(TITLE)) {
-			instance.set(TITLE, html);
+			instance.set(TITLE, instance.headerNode.html());
 		}
+
+		instance.setStdModContent(WidgetStdMod.HEADER, EMPTY_STR);
 
 		instance._syncTitleUI();
 	},
@@ -368,9 +448,14 @@ Panel.prototype = {
 	 */
 	_syncTitleUI: function() {
 		var instance = this;
+
+		var headerTextNode = instance.headerTextNode;
+
 		var title = instance.get(TITLE);
 
-		instance.headerTextNode.html(title);
+		headerTextNode.html(title);
+
+		instance.setStdModContent(WidgetStdMod.HEADER, headerTextNode, WidgetStdMod.BEFORE);
 	},
 
 	/**
@@ -406,7 +491,11 @@ Panel.prototype = {
 		instance._renderHeaderText();
 		instance._renderIconButtons();
 
+		instance.get('contentBox').setAttribute('role', 'tablist');
+
 		instance._syncCollapsedUI();
+
+		instance._setDefaultARIAValues();
 	},
 
 	/**
@@ -421,7 +510,75 @@ Panel.prototype = {
 		var instance = this;
 
 		instance._syncTitleUI();
+	},
+
+	/**
+	 * Set default ARIA roles and attributes.
+	 * @method _setDefaultARIAValues
+	 * @protected
+	 */
+	_setDefaultARIAValues: function() {
+		var instance = this;
+
+		if (!instance.get(USE_ARIA)) {
+			return;
+		}
+
+		var headerNode = instance.headerNode;
+
+		var headerNodeId = headerNode.generateID();
+
+		var bodyNode = instance.bodyNode;
+
+		var bodyNodeId = bodyNode.generateID();
+
+		var ariaRoles = [
+			{
+				name: 'tab',
+				node: headerNode
+			},
+			{
+				name: 'tabpanel',
+				node: bodyNode
+			}
+		];
+
+		instance.aria.setRoles(ariaRoles);
+
+		var ariaAttributes = [
+			{
+				name: 'controls',
+				value: bodyNodeId,
+				node: headerNode
+			},
+			{
+				name: 'labelledby',
+				value: headerNodeId,
+				node: bodyNode
+			},
+			{
+				name: 'describedby',
+				value: headerNodeId,
+				node: bodyNode
+			}
+		];
+
+		if (instance.icons) {
+			var collapseItem = instance.icons.item(COLLAPSE);
+
+			if (collapseItem) {
+				ariaAttributes.push(
+					{
+						name: 'controls',
+						value: bodyNodeId,
+						node: collapseItem.get(BOUNDING_BOX)
+					}
+				);
+			}
+		}
+
+		instance.aria.setAttributes(ariaAttributes);
 	}
 }
 
-A.Panel = A.Base.build(PANEL, A.Component, [Panel, A.WidgetStdMod]);
+A.Panel = A.Component.build(PANEL, A.Component, [A.WidgetStdMod, Panel]);
