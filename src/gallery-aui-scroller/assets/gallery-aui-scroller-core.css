@@ -1,0 +1,28 @@
+.yui3-scroller {
+	overflow: hidden;
+	position: relative;
+}
+
+.yui3-scroller-content {
+	left: 0;
+	position: absolute;
+	top: 0;
+}
+
+.yui3-scroller-vertical .yui3-scroller-content {
+	height: auto !important;
+}
+
+.yui3-scroller-horizontal .yui3-scroller-content {
+	float: left;
+	white-space: nowrap;
+}
+
+.yui3-scroller-horizontal .yui3-scroller-item {
+	display: inline-block;
+}
+
+.ie7 .yui3-scroller-horizontal .yui3-scroller-item, .ie6 .yui3-scroller-horizontal .yui3-scroller-item {
+	display: inline;
+	zoom: 1;
+}
